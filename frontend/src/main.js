@@ -11,6 +11,7 @@ const els = {
   threat: document.getElementById("threat-level"),
   lobbyScreen: document.getElementById("lobby-screen"),
   gameOverScreen: document.getElementById("game-over-screen"),
+  endScreenTitle: document.getElementById("end-screen-title"),
   lobbyPlayerList: document.getElementById("lobby-player-list"),
   lobbyCodeDisplay: document.getElementById("lobby-code-display"),
   multiplayerSidebar: document.getElementById("multiplayer-sidebar"),
@@ -178,6 +179,13 @@ function syncRoom(nextRoom) {
   else banner.style.display = "none";
   if (typingTargetWord() !== prevTypingTarget) renderWord();
 
+  if (state.gameRunning && state.room?.matchEnded) {
+    if (state.room.matchWinnerId === state.myPlayerId) endVictory();
+    else endGame();
+    updateLeaveRoomVisibility();
+    return;
+  }
+
   if (state.gameRunning && me && (me.deadAt || (typeof me.health === "number" && me.health <= 0))) {
     endGame();
     updateLeaveRoomVisibility();
@@ -281,6 +289,10 @@ function startMultiplayerGame() {
   state.currentWord = getWords()[0] || "survive";
   els.lobbyScreen.classList.remove("show");
   els.gameOverScreen.classList.remove("show");
+  if (els.endScreenTitle) {
+    els.endScreenTitle.textContent = "GAME OVER";
+    els.endScreenTitle.className = "title danger-title";
+  }
   els.input.value = "";
   els.input.focus();
   renderWord();
@@ -304,7 +316,37 @@ function endGame() {
     localStorage.setItem("typeToSurviveHighScore", String(state.highScore));
   }
 
+  if (els.endScreenTitle) {
+    els.endScreenTitle.textContent = "GAME OVER";
+    els.endScreenTitle.className = "title danger-title";
+  }
   els.finalStats.innerHTML = `
+    SURVIVED: ${Math.floor(state.timeSurvived)}s<br>
+    THREAT: ${String(Math.max(1, Math.floor(state.timeSurvived / 25) + 1)).padStart(2, "0")}<br>
+    SCORE: ${String(Math.floor(state.score)).padStart(6, "0")}<br>
+    HIGH SCORE: ${String(state.highScore).padStart(6, "0")}
+  `;
+  els.gameOverScreen.classList.add("show");
+}
+
+function endVictory() {
+  state.gameRunning = false;
+  stopGameLoops();
+
+  if (state.score > state.highScore) {
+    state.highScore = Math.floor(state.score);
+    localStorage.setItem("typeToSurviveHighScore", String(state.highScore));
+  }
+
+  const me = getMyPlayer();
+  const name = me?.username ? String(me.username) : "YOU";
+
+  if (els.endScreenTitle) {
+    els.endScreenTitle.textContent = "VICTORY";
+    els.endScreenTitle.className = "title victory-title";
+  }
+  els.finalStats.innerHTML = `
+    YOU WON — ${name}<br><br>
     SURVIVED: ${Math.floor(state.timeSurvived)}s<br>
     THREAT: ${String(Math.max(1, Math.floor(state.timeSurvived / 25) + 1)).padStart(2, "0")}<br>
     SCORE: ${String(Math.floor(state.score)).padStart(6, "0")}<br>

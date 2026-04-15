@@ -37,6 +37,43 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
 .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 0, 26, 0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; gap: 22px; }
 .overlay.show { display: flex; }
 .title { font-size: 3rem; text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-pink); letter-spacing: 8px; text-align: center; }
+/* Minecraft-style title: main line + splash angled over bottom-right */
+.lobby-title-block {
+  position: relative;
+  display: inline-block;
+  text-align: center;
+  margin-bottom: 6px;
+  padding: 0 2.75em 0.55em 0.25em;
+  max-width: 96vw;
+}
+.lobby-main-title {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(1rem, 3.6vw, 2rem);
+  letter-spacing: 4px;
+  line-height: 1.25;
+  text-align: center;
+}
+.lobby-subtitle {
+  position: absolute;
+  right: 0;
+  bottom: 0.02em;
+  z-index: 2;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: clamp(7px, 2.5vw, 25px);
+  font-weight: normal;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  color: rgb(255, 227, 18);
+  text-shadow:
+    2px 2px 0 #2a2000,
+    -1px -1px 0 #000,
+    0 0 12px rgba(255, 234, 85, 0.45);
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: right bottom;
+  transform: rotate(-1deg) translate(-42%, 10%);
+}
 button { background: transparent; border: 4px solid var(--neon-cyan); color: var(--neon-cyan); font-family: "Press Start 2P", monospace; font-size: 1rem; padding: 16px 28px; cursor: pointer; box-shadow: 0 0 18px var(--neon-cyan); transition: all 0.2s; }
 button:hover { background: var(--neon-cyan); color: #0b001a; transform: scale(1.03); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -61,6 +98,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .code-display { font-size: 2.2rem; letter-spacing: 10px; color: #00f7ff; background: rgba(0, 0, 0, 0.6); padding: 10px 20px; border: 4px solid var(--neon-cyan); min-width: 280px; }
 .creator-controls { display: none; text-align: center; }
 .danger, .danger:hover, .danger-title { color: #ff0066; border-color: #ff0066; text-shadow: 0 0 15px #ff0066; }
+.victory-title {
+  color: #00ff88;
+  border-color: #00ff88;
+  text-shadow: 0 0 22px #00ff88, 0 0 44px #00cc66;
+}
 .danger:hover { background: #ff0066; color: #0b001a; }
 .final-stats { font-size: 1rem; line-height: 1.8; margin: 30px 0; text-align: center; }
 #multiplayer-sidebar { position: absolute; top: 90px; right: 30px; z-index: 50; min-width: 300px; }

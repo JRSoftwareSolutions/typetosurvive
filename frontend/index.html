@@ -28,7 +28,10 @@
     <button id="leave-in-game-btn" class="danger in-game-leave">LEAVE ROOM</button>
 
     <div id="lobby-screen" class="overlay show">
-      <div class="title">MULTIPLAYER</div>
+      <div class="lobby-title-block">
+        <div class="title lobby-main-title">TYPE TO SURVIVE</div>
+        <div class="lobby-subtitle">multiplayer</div>
+      </div>
 
       <input id="username-input" type="text" placeholder="YOUR USERNAME" class="username-input" maxlength="16" autocomplete="off" autocapitalize="none" spellcheck="false" />
 
@@ -60,7 +63,7 @@
     </div>
 
     <div id="game-over-screen" class="overlay">
-      <div class="title danger-title">GAME OVER</div>
+      <div id="end-screen-title" class="title danger-title">GAME OVER</div>
       <div id="final-stats" class="final-stats"></div>
       <button id="leave-after-game-btn" class="danger">LEAVE ROOM</button>
     </div>

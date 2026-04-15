@@ -82,6 +82,32 @@ function ensureRoomTicker(roomCode) {
   });
 }
 
+function alivePlayerIds(room) {
+  return Object.entries(room.players || {})
+    .filter(([, p]) => {
+      const hp = typeof p?.health === "number" ? p.health : 100;
+      return hp > 0;
+    })
+    .map(([id]) => id);
+}
+
+function maybeEndMatchLastStanding(roomCode, room) {
+  if (!room?.started || room.matchEnded) return;
+  const ids = Object.keys(room.players || {});
+  if (ids.length < 2) return;
+
+  const alive = alivePlayerIds(room);
+  if (alive.length === 1) {
+    room.matchEnded = true;
+    room.matchWinnerId = alive[0];
+    stopRoomTicker(roomCode);
+  } else if (alive.length === 0) {
+    room.matchEnded = true;
+    room.matchWinnerId = null;
+    stopRoomTicker(roomCode);
+  }
+}
+
 function tickRoom(roomCode) {
   const room = rooms.get(roomCode);
   if (!room || !room.started) return;
@@ -110,6 +136,8 @@ function tickRoom(roomCode) {
       p.deadAt = p.deadAt ?? now;
     }
   });
+
+  maybeEndMatchLastStanding(roomCode, room);
 
   emitRoomUpdate(roomCode);
 }
@@ -149,6 +177,8 @@ export function createRoom({ username, wordSequence }) {
     startedAt: null,
     lastTickAt: null,
     elapsedSeconds: 0,
+    matchEnded: false,
+    matchWinnerId: null,
     effects: [],
     players: {
       [playerId]: {
@@ -195,6 +225,8 @@ export function startRoom({ roomCode, playerId }) {
   room.started = true;
   room.startedAt = room.startedAt ?? Date.now();
   room.lastTickAt = Date.now();
+  room.matchEnded = false;
+  room.matchWinnerId = null;
   emitRoomUpdate(roomCode);
   ensureRoomTicker(roomCode);
   return true;
@@ -249,6 +281,7 @@ export function updatePlayer({ roomCode, playerId, patch }) {
   }
 
   room.players[playerId] = next;
+  maybeEndMatchLastStanding(roomCode, room);
   emitRoomUpdate(roomCode);
   return room.players[playerId];
 }

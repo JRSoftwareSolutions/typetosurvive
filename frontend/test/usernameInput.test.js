@@ -10,7 +10,7 @@ function setupDom() {
     <div id="time"></div>
     <div id="threat-level"></div>
     <div id="lobby-screen"></div>
-    <div id="game-over-screen"></div>
+    <div id="game-over-screen"><div id="end-screen-title"></div></div>
     <div id="lobby-player-list"></div>
     <div id="lobby-code-display"></div>
     <div id="multiplayer-sidebar"></div>

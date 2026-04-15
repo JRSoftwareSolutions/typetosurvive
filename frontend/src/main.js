@@ -106,6 +106,11 @@ function syncRoom(nextRoom) {
   if (me && typeof me.health === "number") state.health = me.health;
   if (typeof state.room?.elapsedSeconds === "number") state.timeSurvived = state.room.elapsedSeconds;
 
+  if (state.gameRunning && me && (me.deadAt || (typeof me.health === "number" && me.health <= 0))) {
+    endGame();
+    return;
+  }
+
   renderPlayerList();
 
   Object.keys(nextPlayers).forEach((playerId) => {
@@ -235,55 +240,10 @@ function endGame() {
 
 function drainHealth() {
   if (!state.gameRunning) return;
-  // #region agent log
-  const now = Date.now();
-  const dtMs = lastDrainTickAt ? now - lastDrainTickAt : null;
-  lastDrainTickAt = now;
-  fetch("http://127.0.0.1:7592/ingest/90bdd843-c9a6-45be-955a-c3b716a803a5", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "4a5832" },
-    body: JSON.stringify({
-      sessionId: "4a5832",
-      runId: "tab-throttle-audit-1",
-      hypothesisId: "H1",
-      location: "frontend/src/main.js:drainHealth",
-      message: "drain tick",
-      data: {
-        dtMs,
-        visibilityState: document.visibilityState,
-        hidden: document.hidden,
-        health: state.health,
-        timeSurvived: state.timeSurvived,
-      },
-      timestamp: now,
-    }),
-  }).catch(() => {});
-  // #endregion
-
   const threat = Math.min(15, Math.floor(state.timeSurvived / 22));
   state.health -= 0.92 + threat * 0.24;
 
   if (Date.now() - state.lastHealthUpdateAt > 350 && state.roomCode && state.myPlayerId) {
-    // #region agent log
-    fetch("http://127.0.0.1:7592/ingest/90bdd843-c9a6-45be-955a-c3b716a803a5", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "4a5832" },
-      body: JSON.stringify({
-        sessionId: "4a5832",
-        runId: "tab-throttle-audit-1",
-        hypothesisId: "H2",
-        location: "frontend/src/main.js:drainHealth",
-        message: "health PATCH scheduled",
-        data: {
-          visibilityState: document.visibilityState,
-          roomCode: state.roomCode,
-          playerId: state.myPlayerId,
-          health: Math.max(0, state.health),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     updatePlayer(state.roomCode, state.myPlayerId, { health: Math.max(0, state.health) }).catch(() => {});
     state.lastHealthUpdateAt = Date.now();
   }
@@ -362,24 +322,6 @@ async function leaveRoomHandler() {
 }
 
 function bindEvents() {
-  // #region agent log
-  document.addEventListener("visibilitychange", () => {
-    fetch("http://127.0.0.1:7592/ingest/90bdd843-c9a6-45be-955a-c3b716a803a5", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "4a5832" },
-      body: JSON.stringify({
-        sessionId: "4a5832",
-        runId: "tab-throttle-audit-1",
-        hypothesisId: "H3",
-        location: "frontend/src/main.js:visibilitychange",
-        message: "tab visibility changed",
-        data: { visibilityState: document.visibilityState, hidden: document.hidden },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  });
-  // #endregion
-
   els.usernameInput.addEventListener("input", () => {
     const original = els.usernameInput.value;
     const sanitized = original.replace(/[^a-z0-9]/gi, "");

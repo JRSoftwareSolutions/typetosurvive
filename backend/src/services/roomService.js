@@ -66,7 +66,9 @@ function tickRoom(roomCode) {
     const currentHealth = typeof p.health === "number" ? p.health : 100;
     const nextHealth = Math.max(0, currentHealth - drainAmount);
     p.health = nextHealth;
-    if (nextHealth <= 0) p.deadAt = p.deadAt ?? now;
+    if (nextHealth <= 0) {
+      p.deadAt = p.deadAt ?? now;
+    }
   });
 
   emitRoomUpdate(roomCode);

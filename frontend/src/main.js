@@ -29,6 +29,14 @@ const els = {
 
 let lastDrainTickAt = 0;
 
+function updateLeaveRoomVisibility() {
+  const inRoom = Boolean(state.roomCode && state.myPlayerId);
+  const display = inRoom ? "" : "none";
+  els.leaveBtn.style.display = display;
+  els.leaveAfterGameBtn.style.display = display;
+  els.leaveInGameBtn.style.display = display;
+}
+
 function getActiveDecoyForMe() {
   const now = Date.now();
   const myId = state.myPlayerId;
@@ -172,6 +180,7 @@ function syncRoom(nextRoom) {
 
   if (state.gameRunning && me && (me.deadAt || (typeof me.health === "number" && me.health <= 0))) {
     endGame();
+    updateLeaveRoomVisibility();
     return;
   }
 
@@ -187,6 +196,8 @@ function syncRoom(nextRoom) {
   if (state.room?.started && !prevStarted && !state.gameRunning) {
     startMultiplayerGame();
   }
+
+  updateLeaveRoomVisibility();
 }
 
 function showLobby() {
@@ -426,6 +437,8 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && state.gameRunning) endGame();
   });
+
+  updateLeaveRoomVisibility();
 }
 
 bindEvents();

@@ -2,8 +2,47 @@ const rooms = new Map();
 const roomSubscribers = new Map();
 const roomTickers = new Map();
 
+const EFFECT_BURST_WINDOW_MS = 5000;
+const EFFECT_BURST_COUNT = 3;
+const EFFECT_DURATION_MS = 11000;
+const EFFECT_COOLDOWN_MS = 9000;
+const DECOY_LENGTH = 7;
+
 function randomId(prefix = "p") {
   return `${prefix}_${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+function generateDecoyWord(length) {
+  const chars = "abcdefghijklmnopqrstuvwxyz";
+  let s = "";
+  for (let i = 0; i < length; i += 1) {
+    s += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return s;
+}
+
+function completeDecoyTyped(room, playerId, effectId) {
+  if (!room?.effects?.length) return;
+  const idx = room.effects.findIndex((e) => e?.id === effectId && e.type === "decoyWord");
+  if (idx === -1) return;
+  const e = room.effects[idx];
+  const words = e.payload?.wordsByPlayerId || {};
+  const completed = e.payload?.completedBy || {};
+  if (!words[playerId] || completed[playerId]) return;
+  e.payload = {
+    ...e.payload,
+    completedBy: { ...completed, [playerId]: true },
+  };
+  const victimIds = Object.keys(words);
+  const allDone = victimIds.length > 0 && victimIds.every((id) => e.payload.completedBy[id]);
+  if (allDone) {
+    room.effects = room.effects.filter((_, i) => i !== idx);
+  }
+}
+
+function pruneExpiredEffects(room, now = Date.now()) {
+  if (!room?.effects?.length) return;
+  room.effects = room.effects.filter((e) => typeof e?.expiresAt === "number" && e.expiresAt > now);
 }
 
 function generateRoomCode() {
@@ -18,6 +57,7 @@ function generateRoomCode() {
 function emitRoomUpdate(roomCode) {
   const listeners = roomSubscribers.get(roomCode) ?? [];
   const room = rooms.get(roomCode);
+  pruneExpiredEffects(room);
   const payload = JSON.stringify(room ?? null);
   listeners.forEach((res) => {
     res.write(`data: ${payload}\n\n`);
@@ -109,12 +149,15 @@ export function createRoom({ username, wordSequence }) {
     startedAt: null,
     lastTickAt: null,
     elapsedSeconds: 0,
+    effects: [],
     players: {
       [playerId]: {
         username,
         health: 100,
         score: 0,
         currentIndex: 0,
+        recentSuccesses: [],
+        nextEffectAllowedAt: 0,
       },
     },
   });
@@ -138,6 +181,8 @@ export function joinRoom({ roomCode, username, playerId }) {
     health: 100,
     score: 0,
     currentIndex: 0,
+    recentSuccesses: [],
+    nextEffectAllowedAt: 0,
   };
 
   emitRoomUpdate(roomCode);
@@ -158,10 +203,52 @@ export function startRoom({ roomCode, playerId }) {
 export function updatePlayer({ roomCode, playerId, patch }) {
   const room = rooms.get(roomCode);
   if (!room?.players?.[playerId]) return null;
-  room.players[playerId] = {
-    ...room.players[playerId],
-    ...patch,
+  const prev = room.players[playerId];
+
+  if (typeof patch?.decoyTypedEffectId === "string") {
+    completeDecoyTyped(room, playerId, patch.decoyTypedEffectId);
+  }
+
+  const { decoyTypedEffectId: _decoyTyped, ...playerPatch } = patch || {};
+  const next = {
+    ...prev,
+    ...playerPatch,
   };
+
+  const now = Date.now();
+  if (typeof playerPatch?.lastSuccess === "number") {
+    const prevRecent = Array.isArray(prev.recentSuccesses) ? prev.recentSuccesses : [];
+    const recent = [...prevRecent, playerPatch.lastSuccess].filter((t) => now - t <= EFFECT_BURST_WINDOW_MS);
+    next.recentSuccesses = recent;
+
+    const cooldownUntil = typeof prev.nextEffectAllowedAt === "number" ? prev.nextEffectAllowedAt : 0;
+    const victimIds = Object.keys(room.players).filter((id) => id !== playerId);
+    if (recent.length >= EFFECT_BURST_COUNT && now >= cooldownUntil && victimIds.length > 0) {
+      const wordsByPlayerId = {};
+      victimIds.forEach((vid) => {
+        wordsByPlayerId[vid] = generateDecoyWord(DECOY_LENGTH);
+      });
+      const effect = {
+        id: randomId("fx"),
+        type: "decoyWord",
+        sourcePlayerId: playerId,
+        targets: "others",
+        createdAt: now,
+        expiresAt: now + EFFECT_DURATION_MS,
+        payload: {
+          wordsByPlayerId,
+          completedBy: {},
+        },
+      };
+      room.effects = Array.isArray(room.effects) ? room.effects : [];
+      room.effects.push(effect);
+      next.nextEffectAllowedAt = now + EFFECT_COOLDOWN_MS;
+    } else {
+      next.nextEffectAllowedAt = cooldownUntil;
+    }
+  }
+
+  room.players[playerId] = next;
   emitRoomUpdate(roomCode);
   return room.players[playerId];
 }

@@ -1,6 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 :root { --neon-cyan: #00f7ff; --neon-pink: #ff00aa; --dark-bg: #0b001a; }
+.app-version {
+  position: fixed;
+  top: 10px;
+  left: 12px;
+  z-index: 200;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(0, 247, 255, 0.42);
+  text-shadow: 0 0 8px rgba(0, 247, 255, 0.2);
+  pointer-events: none;
+  user-select: none;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--dark-bg); color: var(--neon-cyan); font-family: "Press Start 2P", system-ui; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; position: relative; }
 header { width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: rgba(0, 0, 0, 0.8); border-bottom: 6px solid var(--neon-cyan); box-shadow: 0 0 20px var(--neon-cyan); z-index: 10; }

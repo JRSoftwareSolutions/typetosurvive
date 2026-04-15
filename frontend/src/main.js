@@ -29,6 +29,51 @@ const els = {
 
 let lastDrainTickAt = 0;
 
+function getActiveDecoyForMe() {
+  const now = Date.now();
+  const myId = state.myPlayerId;
+  const effects = state.room?.effects || [];
+  for (let i = 0; i < effects.length; i += 1) {
+    const e = effects[i];
+    if (!e || e.type !== "decoyWord" || typeof e.expiresAt !== "number" || e.expiresAt <= now) continue;
+    if (e.sourcePlayerId === myId) continue;
+    const w = e.payload?.wordsByPlayerId?.[myId];
+    const done = e.payload?.completedBy?.[myId];
+    if (typeof w === "string" && w.length > 0 && !done) return { effectId: e.id, word: w };
+  }
+  return null;
+}
+
+function typingTargetWord() {
+  const decoy = getActiveDecoyForMe();
+  if (decoy) return decoy.word;
+  return state.currentWord;
+}
+
+function ensureEffectBanner() {
+  const existing = document.getElementById("effect-banner");
+  if (existing) return existing;
+  const banner = document.createElement("div");
+  banner.id = "effect-banner";
+  banner.style.position = "absolute";
+  banner.style.left = "50%";
+  banner.style.top = "120px";
+  banner.style.transform = "translateX(-50%)";
+  banner.style.padding = "10px 18px";
+  banner.style.border = "3px solid var(--neon-pink)";
+  banner.style.borderRadius = "10px";
+  banner.style.background = "rgba(0,0,0,0.8)";
+  banner.style.color = "#ff00aa";
+  banner.style.fontWeight = "800";
+  banner.style.letterSpacing = "2px";
+  banner.style.textShadow = "0 0 12px #ff00aa";
+  banner.style.zIndex = "60";
+  banner.style.display = "none";
+  banner.textContent = "JAMMED!";
+  document.body.appendChild(banner);
+  return banner;
+}
+
 function getWords() {
   return state.room?.wordSequence ?? [];
 }
@@ -39,7 +84,8 @@ function getMyPlayer() {
 
 function renderWord() {
   els.letters.innerHTML = "";
-  for (const char of state.currentWord) {
+  const displayWord = typingTargetWord();
+  for (const char of displayWord) {
     const span = document.createElement("span");
     span.className = "letter pending";
     span.textContent = char;
@@ -100,11 +146,29 @@ function syncRoom(nextRoom) {
   const prevStarted = Boolean(state.room?.started);
   const prevPlayers = state.room?.players || {};
   const nextPlayers = nextRoom?.players || {};
+  const prevTypingTarget = typingTargetWord();
   state.room = nextRoom;
 
   const me = getMyPlayer();
   if (me && typeof me.health === "number") state.health = me.health;
   if (typeof state.room?.elapsedSeconds === "number") state.timeSurvived = state.room.elapsedSeconds;
+
+  const now = Date.now();
+  const effects = Array.isArray(state.room?.effects) ? state.room.effects : [];
+  const myId = state.myPlayerId;
+  const active = effects.filter((e) => {
+    if (!e || typeof e.expiresAt !== "number" || e.expiresAt <= now) return false;
+    if (e.targets === "others") return e.sourcePlayerId !== myId;
+    if (Array.isArray(e.targets)) return e.targets.includes(myId);
+    return false;
+  });
+  state.activeEffects = active;
+
+  const banner = ensureEffectBanner();
+  const decoyActive = Boolean(getActiveDecoyForMe());
+  if (decoyActive) banner.style.display = "block";
+  else banner.style.display = "none";
+  if (typingTargetWord() !== prevTypingTarget) renderWord();
 
   if (state.gameRunning && me && (me.deadAt || (typeof me.health === "number" && me.health <= 0))) {
     endGame();
@@ -265,7 +329,7 @@ function startTimer() {
 
 function updateLetterColors(typed) {
   const typedLower = typed.toLowerCase();
-  const wordLower = state.currentWord.toLowerCase();
+  const wordLower = typingTargetWord().toLowerCase();
   const spans = els.letters.querySelectorAll(".letter");
   let hasTypo = false;
 
@@ -310,6 +374,19 @@ function success() {
   renderWord();
 }
 
+async function onDecoySuccess() {
+  const d = getActiveDecoyForMe();
+  if (!d || !state.roomCode || !state.myPlayerId) return;
+  try {
+    await updatePlayer(state.roomCode, state.myPlayerId, { decoyTypedEffectId: d.effectId });
+  } catch {
+    // no-op
+  }
+  els.input.value = "";
+  renderWord();
+  updateUI();
+}
+
 async function leaveRoomHandler() {
   try {
     if (state.roomCode && state.myPlayerId) await leaveRoom(state.roomCode, state.myPlayerId);
@@ -339,7 +416,11 @@ function bindEvents() {
     if (!state.gameRunning) return;
     const typed = e.target.value.trim();
     updateLetterColors(typed);
-    if (typed.toLowerCase() === state.currentWord.toLowerCase()) success();
+    const target = typingTargetWord();
+    if (typed.toLowerCase() === target.toLowerCase()) {
+      if (getActiveDecoyForMe()) void onDecoySuccess();
+      else success();
+    }
   });
 
   document.addEventListener("keydown", (e) => {
@@ -348,3 +429,9 @@ function bindEvents() {
 }
 
 bindEvents();
+
+const versionEl = document.getElementById("app-version");
+if (versionEl) {
+  const v = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
+  versionEl.textContent = `v${v}`;
+}

@@ -7,6 +7,7 @@ export const state = {
   gameRunning: false,
   myCurrentIndex: 0,
   currentWord: "",
+  activeEffects: [],
   health: 100,
   score: 0,
   timeSurvived: 0,

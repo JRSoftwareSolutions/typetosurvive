@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TYPE TO SURVIVE - MULTIPLAYER</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="logo">TYPE TO SURVIVE</div>
+      <div class="stats">
+        <div class="stat"><div class="label">SCORE</div><div id="score" class="score-value">000000</div></div>
+        <div class="stat"><div class="label">THREAT LEVEL</div><div id="threat-level" class="threat">01</div></div>
+        <div class="stat"><div class="label">HEALTH</div><div class="health-container"><div id="health-bar" class="health-bar"></div><div id="health-text" class="health-text">100%</div></div></div>
+        <div class="stat"><div class="label">SURVIVED</div><div id="time" class="score-value">00:00</div></div>
+      </div>
+    </header>
+
+    <main>
+      <div id="word-container" class="word-container"><div id="letters"></div></div>
+      <input type="text" id="typing-input" autocomplete="off" spellcheck="false" placeholder="TYPE THE WORD ABOVE..." />
+      <div id="multiplayer-sidebar"></div>
+      <div id="particles"></div>
+    </main>
+
+    <button id="leave-in-game-btn" class="danger in-game-leave">LEAVE ROOM</button>
+
+    <div id="lobby-screen" class="overlay show">
+      <div class="title">MULTIPLAYER</div>
+
+      <input id="username-input" type="text" placeholder="YOUR USERNAME" class="username-input" maxlength="16" autocomplete="off" autocapitalize="none" spellcheck="false" />
+
+      <div class="button-row">
+        <button id="create-btn">CREATE ROOM</button>
+        <button id="join-btn">JOIN ROOM</button>
+      </div>
+
+      <div class="join-box">
+        <input id="join-code-input" type="text" maxlength="6" placeholder="ROOM CODE" class="code-input" />
+      </div>
+
+      <div class="player-list-wrap">
+        <div class="label-pink">PLAYERS IN ROOM</div>
+        <div id="lobby-player-list" class="player-list"></div>
+      </div>
+
+      <div class="room-code-wrap">
+        <div class="code-label">ROOM CODE</div>
+        <div id="lobby-code-display" class="code-display">- - - -</div>
+      </div>
+
+      <div id="creator-controls" class="creator-controls">
+        <div class="creator-label">YOU ARE THE ROOM CREATOR</div>
+        <button id="start-btn">START GAME FOR EVERYONE</button>
+      </div>
+
+      <button id="leave-btn" class="danger">LEAVE ROOM</button>
+    </div>
+
+    <div id="game-over-screen" class="overlay">
+      <div class="title danger-title">GAME OVER</div>
+      <div id="final-stats" class="final-stats"></div>
+      <button id="leave-after-game-btn" class="danger">LEAVE ROOM</button>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+export const state = {
+  roomCode: "",
+  room: null,
+  eventSource: null,
+  myPlayerId: null,
+  myUsername: "",
+  gameRunning: false,
+  myCurrentIndex: 0,
+  currentWord: "",
+  health: 100,
+  score: 0,
+  timeSurvived: 0,
+  highScore: Number(localStorage.getItem("typeToSurviveHighScore") || 0),
+  drainInterval: null,
+  timerInterval: null,
+  lastHealthUpdateAt: 0,
+  lastRenderAt: 0,
+};

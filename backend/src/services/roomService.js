@@ -121,17 +121,25 @@ function tickRoom(roomCode) {
   room.lastTickAt = now;
   room.elapsedSeconds = Math.floor((now - startedAt) / 1000);
 
-  const threat = Math.min(15, Math.floor(room.elapsedSeconds / 22));
-  const drainPer85ms = 0.92 + threat * 0.24;
-  const drainPerMs = drainPer85ms / 85;
-  const drainAmount = drainPerMs * dtMs;
-
   Object.keys(room.players).forEach((playerId) => {
     const p = room.players[playerId];
     if (!p) return;
+    const resetAt = typeof p.threatResetElapsedSeconds === "number" ? p.threatResetElapsedSeconds : 0;
+    const effectiveElapsed = Math.max(0, room.elapsedSeconds - resetAt);
+    const threat = Math.min(15, Math.floor(effectiveElapsed / 22));
+    const drainPer85ms = 0.92 + threat * 0.24;
+    const drainPerMs = drainPer85ms / 85;
+    const drainAmount = drainPerMs * dtMs;
     const currentHealth = typeof p.health === "number" ? p.health : 100;
     const nextHealth = Math.max(0, currentHealth - drainAmount);
     p.health = nextHealth;
+    if (!p.secondWindUsed) {
+      if (nextHealth < 20 && typeof p.secondWindLowAt !== "number") {
+        p.secondWindLowAt = now;
+      } else if (typeof p.secondWindLowAt === "number" && now - p.secondWindLowAt > 2000) {
+        p.secondWindLowAt = null;
+      }
+    }
     if (nextHealth <= 0) {
       p.deadAt = p.deadAt ?? now;
     }
@@ -200,6 +208,9 @@ export function createRoom({ username, wordSequence }) {
         currentIndex: 0,
         recentSuccesses: [],
         nextEffectAllowedAt: 0,
+        secondWindUsed: false,
+        secondWindLowAt: null,
+        threatResetElapsedSeconds: 0,
       },
     },
   });
@@ -226,6 +237,9 @@ export function joinRoom({ roomCode, username, playerId }) {
     currentIndex: 0,
     recentSuccesses: [],
     nextEffectAllowedAt: 0,
+    secondWindUsed: false,
+    secondWindLowAt: null,
+    threatResetElapsedSeconds: 0,
   };
 
   room.participants = room.participants ?? {};
@@ -274,6 +288,14 @@ export function updatePlayer({ roomCode, playerId, patch }) {
   };
 
   const now = Date.now();
+  const lowAt = typeof next.secondWindLowAt === "number" ? next.secondWindLowAt : null;
+  const canSecondWind = !next.secondWindUsed && lowAt != null && now - lowAt <= 2000;
+  const healedHigh = typeof next.health === "number" && next.health >= 80;
+  if (canSecondWind && healedHigh) {
+    next.secondWindUsed = true;
+    next.secondWindLowAt = null;
+    next.threatResetElapsedSeconds = room.elapsedSeconds;
+  }
   if (typeof playerPatch?.lastSuccess === "number") {
     const prevRecent = Array.isArray(prev.recentSuccesses) ? prev.recentSuccesses : [];
     const recent = [...prevRecent, playerPatch.lastSuccess].filter((t) => now - t <= EFFECT_BURST_WINDOW_MS);

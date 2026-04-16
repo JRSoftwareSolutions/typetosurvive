@@ -83,6 +83,30 @@ function ensureEffectBanner() {
   return banner;
 }
 
+function ensureSecondWindBanner() {
+  const existing = document.getElementById("second-wind-banner");
+  if (existing) return existing;
+  const banner = document.createElement("div");
+  banner.id = "second-wind-banner";
+  banner.style.position = "absolute";
+  banner.style.left = "50%";
+  banner.style.top = "160px";
+  banner.style.transform = "translateX(-50%)";
+  banner.style.padding = "12px 20px";
+  banner.style.border = "3px solid #00ff88";
+  banner.style.borderRadius = "10px";
+  banner.style.background = "rgba(0,0,0,0.82)";
+  banner.style.color = "#00ff88";
+  banner.style.fontWeight = "900";
+  banner.style.letterSpacing = "2px";
+  banner.style.textShadow = "0 0 14px rgba(0,255,136,0.7)";
+  banner.style.zIndex = "60";
+  banner.style.display = "none";
+  banner.textContent = "SECOND WIND!";
+  document.body.appendChild(banner);
+  return banner;
+}
+
 function getWords() {
   return state.room?.wordSequence ?? [];
 }
@@ -142,7 +166,11 @@ function updateUI() {
   const minutes = Math.floor(state.timeSurvived / 60);
   const seconds = Math.floor(state.timeSurvived % 60);
   els.time.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  els.threat.textContent = String(Math.max(1, Math.floor(state.timeSurvived / 25) + 1)).padStart(2, "0");
+  const me = getMyPlayer();
+  const resetAt = typeof me?.threatResetElapsedSeconds === "number" ? me.threatResetElapsedSeconds : 0;
+  const effectiveElapsed = Math.max(0, state.timeSurvived - resetAt);
+  const threat = Math.min(15, Math.floor(effectiveElapsed / 22)) + 1;
+  els.threat.textContent = String(threat).padStart(2, "0");
 }
 
 function flashPlayer(playerId, className, timeoutMs) {
@@ -162,6 +190,18 @@ function syncRoom(nextRoom) {
   const me = getMyPlayer();
   if (me && typeof me.health === "number") state.health = me.health;
   if (typeof state.room?.elapsedSeconds === "number") state.timeSurvived = state.room.elapsedSeconds;
+
+  // Second wind local flash (only for this client)
+  const prevMe = prevPlayers?.[state.myPlayerId] || {};
+  const didSecondWind = Boolean(me?.secondWindUsed) && !Boolean(prevMe?.secondWindUsed);
+  if (didSecondWind) {
+    const sw = ensureSecondWindBanner();
+    sw.style.display = "block";
+    clearTimeout(state.secondWindFlashTimeout);
+    state.secondWindFlashTimeout = setTimeout(() => {
+      sw.style.display = "none";
+    }, 1400);
+  }
 
   const now = Date.now();
   const effects = Array.isArray(state.room?.effects) ? state.room.effects : [];

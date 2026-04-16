@@ -14,6 +14,7 @@ export const state = {
   highScore: Number(localStorage.getItem("typeToSurviveHighScore") || 0),
   drainInterval: null,
   timerInterval: null,
+  secondWindFlashTimeout: null,
   lastHealthUpdateAt: 0,
   lastRenderAt: 0,
 };

@@ -199,8 +199,11 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
 }
 .rules-card:hover {
   background: rgba(0, 247, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
   transform: scale(1.01);
 }
+.rules-card:hover .rules-card-title { color: #00f7ff; }
+.rules-card:hover .rules-card-sub { opacity: 0.95; }
 .rules-card:focus-visible {
   outline: 3px solid rgba(255, 0, 170, 0.75);
   outline-offset: 2px;

@@ -35,7 +35,7 @@ export function deriveActiveEffects({ effects, myPlayerId, now }: DeriveActiveEf
   return list.filter((e) => {
     if (!e || typeof e.expiresAt !== "number" || e.expiresAt <= t) return false;
     if (e.targets === "others") return e.sourcePlayerId !== myId;
-    if (Array.isArray(e.targets)) return Boolean(myId) && (e.targets as string[]).includes(myId);
+    if (Array.isArray(e.targets)) return myId != null && (e.targets as string[]).includes(myId);
     return false;
   });
 }

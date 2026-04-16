@@ -2,11 +2,7 @@ const rooms = new Map();
 const roomSubscribers = new Map();
 const roomTickers = new Map();
 
-const EFFECT_BURST_WINDOW_MS = 5000;
-const EFFECT_BURST_COUNT = 5;
-const EFFECT_DURATION_MS = 11000;
-const EFFECT_COOLDOWN_MS = 30000;
-const DECOY_LENGTH = 5;
+import { DECOY_WORD } from "../constants.js";
 
 const FLOW_OBSCURE_TICK_MS = 350;
 const FLOW_OBSCURE_MAX_TICKS = 80;
@@ -361,15 +357,15 @@ export function updatePlayer({ roomCode, playerId, patch }) {
   }
   if (typeof playerPatch?.lastSuccess === "number") {
     const prevRecent = Array.isArray(prev.recentSuccesses) ? prev.recentSuccesses : [];
-    const recent = [...prevRecent, playerPatch.lastSuccess].filter((t) => now - t <= EFFECT_BURST_WINDOW_MS);
+    const recent = [...prevRecent, playerPatch.lastSuccess].filter((t) => now - t <= DECOY_WORD.burstWindowMs);
     next.recentSuccesses = recent;
 
     const cooldownUntil = typeof prev.nextEffectAllowedAt === "number" ? prev.nextEffectAllowedAt : 0;
     const victimIds = Object.keys(room.players).filter((id) => id !== playerId);
-    if (recent.length >= EFFECT_BURST_COUNT && now >= cooldownUntil && victimIds.length > 0) {
+    if (recent.length >= DECOY_WORD.burstCount && now >= cooldownUntil && victimIds.length > 0) {
       const wordsByPlayerId = {};
       victimIds.forEach((vid) => {
-        wordsByPlayerId[vid] = generateDecoyWord(DECOY_LENGTH);
+        wordsByPlayerId[vid] = generateDecoyWord(DECOY_WORD.length);
       });
       const effect = {
         id: randomId("fx"),
@@ -377,7 +373,7 @@ export function updatePlayer({ roomCode, playerId, patch }) {
         sourcePlayerId: playerId,
         targets: "others",
         createdAt: now,
-        expiresAt: now + EFFECT_DURATION_MS,
+        expiresAt: now + DECOY_WORD.durationMs,
         payload: {
           wordsByPlayerId,
           completedBy: {},
@@ -385,7 +381,7 @@ export function updatePlayer({ roomCode, playerId, patch }) {
       };
       room.effects = Array.isArray(room.effects) ? room.effects : [];
       room.effects.push(effect);
-      next.nextEffectAllowedAt = now + EFFECT_COOLDOWN_MS;
+      next.nextEffectAllowedAt = now + DECOY_WORD.cooldownMs;
     } else {
       next.nextEffectAllowedAt = cooldownUntil;
     }

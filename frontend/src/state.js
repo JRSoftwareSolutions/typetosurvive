@@ -17,6 +17,7 @@ export const state = {
   secondWindFlashTimeout: null,
   rulesView: "index",
   rulesSelectedId: null,
+  rulesIndexScrollTop: 0,
   lastHealthUpdateAt: 0,
   lastRenderAt: 0,
 };

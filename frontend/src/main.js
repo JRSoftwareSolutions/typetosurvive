@@ -684,6 +684,7 @@ function renderRules() {
     return;
   }
   els.rulesContent.innerHTML = rulesIndexHtml();
+  els.rulesContent.scrollTop = typeof state.rulesIndexScrollTop === "number" ? state.rulesIndexScrollTop : 0;
 }
 
 function openRules() {
@@ -734,6 +735,7 @@ function bindEvents() {
     if (card) {
       const id = card.getAttribute("data-rules-id");
       if (!id) return;
+      state.rulesIndexScrollTop = els.rulesContent?.scrollTop ?? 0;
       state.rulesView = "detail";
       state.rulesSelectedId = id;
       renderRules();

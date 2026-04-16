@@ -312,10 +312,29 @@ function getActiveDecoyForMe() {
   return null;
 }
 
-function typingTargetWord() {
+function getDecoyTypingState() {
   const decoy = getActiveDecoyForMe();
-  if (decoy) return decoy.word;
-  return state.currentWord;
+  if (!decoy) {
+    state.decoyDeferEffectId = null;
+    state.decoyDeferIndex = null;
+    return { decoy: null, useDecoyWord: false };
+  }
+  if (state.decoyDeferEffectId !== decoy.effectId) {
+    state.decoyDeferEffectId = decoy.effectId;
+    state.decoyDeferIndex = state.myCurrentIndex;
+  }
+  const useDecoyWord = state.myCurrentIndex > state.decoyDeferIndex;
+  return { decoy, useDecoyWord };
+}
+
+function isDecoyTypingActive() {
+  return getDecoyTypingState().useDecoyWord;
+}
+
+function typingTargetWord() {
+  const { decoy, useDecoyWord } = getDecoyTypingState();
+  if (!decoy || !useDecoyWord) return state.currentWord;
+  return decoy.word;
 }
 
 function ensureEffectBanner() {
@@ -769,8 +788,8 @@ function syncRoom(nextRoom) {
   updateFlowObscureVfx();
 
   const banner = ensureEffectBanner();
-  const decoyActive = Boolean(getActiveDecoyForMe());
-  if (decoyActive) banner.style.display = "block";
+  const jammedTyping = isDecoyTypingActive();
+  if (jammedTyping) banner.style.display = "block";
   else banner.style.display = "none";
   if (typingTargetWord() !== prevTypingTarget) renderWord();
 
@@ -883,6 +902,8 @@ function startMultiplayerGame() {
   state.gameRunning = true;
   document.body.classList.add("in-game");
   state.myCurrentIndex = 0;
+  state.decoyDeferEffectId = null;
+  state.decoyDeferIndex = null;
   state.score = 0;
   state.currentWord = getWords()[0] || "survive";
   state.flowGauge = 0;
@@ -1153,7 +1174,7 @@ const RULE_ITEMS = [
   { id: "secondWind", kind: "buff", title: "SECOND WIND", subtitle: "Threat reset", implemented: true },
   { id: "comingSoonBuff1", kind: "buff", title: "COMING SOON", subtitle: "New buff", implemented: false },
   { id: "comingSoonBuff2", kind: "buff", title: "COMING SOON", subtitle: "New buff", implemented: false },
-  { id: "decoyWord", kind: "debuff", title: "DECOY WORD", subtitle: "Fake target word", implemented: true },
+  { id: "decoyWord", kind: "debuff", title: "DECOY WORD", subtitle: "Fake next word", implemented: true },
   { id: "comingSoonDebuff1", kind: "debuff", title: "COMING SOON", subtitle: "New debuff", implemented: false },
   { id: "comingSoonDebuff2", kind: "debuff", title: "COMING SOON", subtitle: "New debuff", implemented: false },
 ];
@@ -1245,7 +1266,7 @@ function rulesDetailHtml(itemId) {
       <div class="rules-section">
         <div class="rules-h">DECOY WORD</div>
         <div class="rules-p"><span class="rules-k">Trigger</span>: an opponent gets <span class="rules-k">3 successes within 5 seconds</span> (with a short cooldown).</div>
-        <div class="rules-p"><span class="rules-k">Effect</span>: you’re forced to type a fake word instead of the real one until you complete it.</div>
+        <div class="rules-p"><span class="rules-k">Effect</span>: after you finish the word you’re on when it hits, your <span class="rules-k">next</span> target becomes a fake word until you complete it.</div>
       </div>
     `;
   }
@@ -1345,7 +1366,7 @@ function bindEvents() {
     const target = typingTargetWord();
     applyFlowInputDelta(typed, target);
     if (typed.toLowerCase() === target.toLowerCase()) {
-      if (getActiveDecoyForMe()) void onDecoySuccess();
+      if (isDecoyTypingActive()) void onDecoySuccess();
       else success();
     }
   });

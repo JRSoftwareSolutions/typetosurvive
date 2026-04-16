@@ -34,4 +34,8 @@ export const state = {
   // Dev-only: local multiplayer test bots (enabled via ?dev=1)
   devBotsEnabled: false,
   devBotIds: [],
+
+  // decoyWord: defer fake word until the word after the one in progress when the effect arrives
+  decoyDeferEffectId: null,
+  decoyDeferIndex: null,
 };

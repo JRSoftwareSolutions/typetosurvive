@@ -48,10 +48,14 @@ test("decoyWord: victim sees jammed banner after attacker burst", async ({ brows
   await typeCurrentWord(a);
   await typeCurrentWord(a);
 
-  // Victim should see the JAMMED banner appear at some point.
+  // Decoy applies to the victim's next word after the one in progress; finish at least one word so the jammed target can appear.
   const banner = b.locator("#effect-banner");
   await expect(banner).toHaveCount(1);
-  await expect(banner).toBeVisible();
+  await expect.poll(async () => {
+    if (await banner.isVisible()) return true;
+    await typeCurrentWord(b);
+    return await banner.isVisible();
+  }, { timeout: 25_000 }).toBe(true);
 
   await a.close();
   await b.close();

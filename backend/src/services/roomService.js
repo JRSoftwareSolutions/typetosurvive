@@ -3,10 +3,10 @@ const roomSubscribers = new Map();
 const roomTickers = new Map();
 
 const EFFECT_BURST_WINDOW_MS = 5000;
-const EFFECT_BURST_COUNT = 3;
+const EFFECT_BURST_COUNT = 5;
 const EFFECT_DURATION_MS = 11000;
-const EFFECT_COOLDOWN_MS = 9000;
-const DECOY_LENGTH = 7;
+const EFFECT_COOLDOWN_MS = 30000;
+const DECOY_LENGTH = 5;
 
 const FLOW_OBSCURE_TICK_MS = 350;
 const FLOW_OBSCURE_MAX_TICKS = 80;

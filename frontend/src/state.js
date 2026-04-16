@@ -30,4 +30,8 @@ export const state = {
   flowCounter: 0,
   flowLastInputValue: "",
   flowLastCharEffectAt: 0,
+
+  // Dev-only: local multiplayer test bots (enabled via ?dev=1)
+  devBotsEnabled: false,
+  devBotIds: [],
 };

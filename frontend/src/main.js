@@ -8,6 +8,10 @@ const FLOW_FACTORIAL_ADD_CAP = 30;
 const FLOW_MIN_MS = 8000;
 const FLOW_MAX_MS = 12000;
 
+const DEV_BOT_CHAR_MS = 500;
+const DEV_BOT_WORD_PAUSE_MS = 500;
+const DEV_BOT_JITTER_MS = 250;
+
 function lerp(a, b, t) {
   const tt = Math.max(0, Math.min(1, t));
   return a + (b - a) * tt;
@@ -51,6 +55,234 @@ const els = {
 };
 
 let lastDrainTickAt = 0;
+
+const devBotTimersById = new Map();
+const devBotFlowById = new Map();
+
+function isDevBotsEnabled() {
+  try {
+    return new URLSearchParams(location.search).get("dev") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function ensureDevBotPanel() {
+  const existing = document.getElementById("dev-bot-panel");
+  if (existing) return existing;
+
+  const panel = document.createElement("div");
+  panel.id = "dev-bot-panel";
+  panel.style.marginTop = "12px";
+  panel.style.width = "min(640px, 92vw)";
+  panel.style.border = "3px dashed rgba(0, 247, 255, 0.55)";
+  panel.style.borderRadius = "12px";
+  panel.style.padding = "12px";
+  panel.style.background = "rgba(0,0,0,0.35)";
+  panel.style.boxShadow = "0 0 20px rgba(0, 247, 255, 0.12)";
+
+  const title = document.createElement("div");
+  title.textContent = "DEV: BOTS ENABLED";
+  title.style.color = "#00f7ff";
+  title.style.letterSpacing = "0.12em";
+  title.style.textAlign = "center";
+  title.style.marginBottom = "10px";
+  title.style.textShadow = "0 0 12px rgba(0,247,255,0.22)";
+  panel.appendChild(title);
+
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.flexWrap = "wrap";
+  row.style.gap = "10px";
+  row.style.justifyContent = "center";
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.id = "dev-add-bot-btn";
+  addBtn.textContent = "ADD BOT";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.id = "dev-remove-bots-btn";
+  removeBtn.textContent = "REMOVE BOTS";
+  removeBtn.className = "danger";
+
+  const hint = document.createElement("div");
+  hint.id = "dev-bot-hint";
+  hint.style.marginTop = "10px";
+  hint.style.fontSize = "0.75rem";
+  hint.style.opacity = "0.85";
+  hint.style.textAlign = "center";
+  hint.style.lineHeight = "1.6";
+  hint.textContent = "Perfect bot types correct words at a fixed cadence.";
+
+  row.appendChild(addBtn);
+  row.appendChild(removeBtn);
+  panel.appendChild(row);
+  panel.appendChild(hint);
+
+  // Insert above the leave room button in lobby.
+  els.lobbyScreen.insertBefore(panel, els.leaveBtn);
+  return panel;
+}
+
+function updateDevBotPanel() {
+  if (!state.devBotsEnabled) return;
+  const panel = ensureDevBotPanel();
+  panel.style.display = state.roomCode && state.myPlayerId ? "block" : "none";
+
+  const hint = document.getElementById("dev-bot-hint");
+  if (hint) {
+    const n = Array.isArray(state.devBotIds) ? state.devBotIds.length : 0;
+    hint.textContent = `Perfect bot types correct words at a fixed cadence. Active bots: ${n}.`;
+  }
+}
+
+function stopDevBotTimer(botId) {
+  const t = devBotTimersById.get(botId);
+  if (typeof t === "number") clearTimeout(t);
+  devBotTimersById.delete(botId);
+}
+
+function removeDevBotState(botId) {
+  stopDevBotTimer(botId);
+  devBotFlowById.delete(botId);
+}
+
+async function removeAllDevBots({ leaveServer = true } = {}) {
+  const ids = Array.isArray(state.devBotIds) ? [...state.devBotIds] : [];
+  ids.forEach((id) => removeDevBotState(id));
+  state.devBotIds = [];
+  updateDevBotPanel();
+
+  if (!leaveServer || !state.roomCode) return;
+  await Promise.all(ids.map((id) => leaveRoom(state.roomCode, id).catch(() => {})));
+}
+
+function getDevBotFlow(botId) {
+  const existing = devBotFlowById.get(botId);
+  if (existing) return existing;
+  const init = {
+    gauge: 0,
+    streak: 0,
+    active: false,
+    endsAt: 0,
+    counter: 0,
+  };
+  devBotFlowById.set(botId, init);
+  return init;
+}
+
+async function maybeEndDevBotFlow(botId, flow) {
+  if (!flow.active) return;
+  const now = Date.now();
+  if (flow.endsAt > 0 && now < flow.endsAt) return;
+  flow.active = false;
+  flow.endsAt = 0;
+  const payout = Math.max(0, Math.trunc(flow.counter || 0));
+  flow.counter = 0;
+  if (state.roomCode) {
+    await updatePlayer(state.roomCode, botId, {
+      flowActive: false,
+      flowPayout: payout,
+      flowLastEndedAt: now,
+    }).catch(() => {});
+  }
+}
+
+async function maybeActivateDevBotFlow(botId, flow) {
+  if (flow.active) return;
+  const gauge = Math.max(0, Math.min(FLOW_GAUGE_MAX, Number(flow.gauge) || 0));
+  if (gauge < FLOW_GAUGE_MAX * FLOW_GAUGE_ACTIVATE_AT) return;
+  const durationMs = Math.floor(lerp(FLOW_MIN_MS, FLOW_MAX_MS, gauge / FLOW_GAUGE_MAX));
+  flow.active = true;
+  flow.endsAt = Date.now() + durationMs;
+  flow.counter = 0;
+  flow.gauge = 0;
+  flow.streak = 0;
+  if (state.roomCode) {
+    await updatePlayer(state.roomCode, botId, { flowActive: true, flowGauge: 0 }).catch(() => {});
+  }
+}
+
+function scheduleDevBotStep(botId) {
+  stopDevBotTimer(botId);
+
+  if (!state.roomCode) return;
+  if (!state.room?.started) {
+    devBotTimersById.set(botId, setTimeout(() => scheduleDevBotStep(botId), 250));
+    return;
+  }
+  const bot = state.room?.players?.[botId];
+  if (!bot) return;
+
+  const flow = getDevBotFlow(botId);
+
+  const idx = typeof bot.currentIndex === "number" ? bot.currentIndex : 0;
+  const word = state.room?.wordSequence?.[idx];
+  if (typeof word !== "string" || word.length === 0) return;
+
+  const jitter = Math.floor((Math.random() * 2 - 1) * DEV_BOT_JITTER_MS);
+  const delay = Math.max(30, word.length * DEV_BOT_CHAR_MS + DEV_BOT_WORD_PAUSE_MS + jitter);
+
+  const handle = setTimeout(async () => {
+    if (!state.roomCode || !state.room?.started) return scheduleDevBotStep(botId);
+    const b = state.room?.players?.[botId];
+    if (!b) return;
+
+    await maybeEndDevBotFlow(botId, flow);
+    await maybeActivateDevBotFlow(botId, flow);
+
+    const currentIndex = typeof b.currentIndex === "number" ? b.currentIndex : 0;
+    const targetWord = state.room?.wordSequence?.[currentIndex];
+    if (typeof targetWord !== "string" || targetWord.length === 0) return;
+
+    const nextScore = (typeof b.score === "number" ? b.score : 0) + targetWord.length * 18 + 50;
+    if (flow.active) {
+      flow.counter = (Number(flow.counter) || 0) + targetWord.length;
+    } else {
+      flow.streak = Math.max(0, (Number(flow.streak) || 0) + 1);
+      const n = Math.min(FLOW_STREAK_SOFT_CAP, flow.streak);
+      const add = Math.min(factorial(n), FLOW_FACTORIAL_ADD_CAP);
+      flow.gauge = Math.min(FLOW_GAUGE_MAX, (Number(flow.gauge) || 0) + add);
+    }
+    try {
+      await updatePlayer(state.roomCode, botId, {
+        currentIndex: currentIndex + 1,
+        lastSuccess: Date.now(),
+        score: nextScore,
+        health: 100,
+        flowGauge: flow.active ? 0 : flow.gauge,
+        flowActive: flow.active,
+      });
+    } catch {
+      // no-op
+    }
+
+    await maybeEndDevBotFlow(botId, flow);
+    scheduleDevBotStep(botId);
+  }, delay);
+
+  devBotTimersById.set(botId, handle);
+}
+
+async function addDevBot() {
+  if (!state.devBotsEnabled) return;
+  if (!state.roomCode) return;
+  const n = (Array.isArray(state.devBotIds) ? state.devBotIds.length : 0) + 1;
+  const username = `BOT_${n}`;
+  try {
+    const response = await joinRoom(state.roomCode, username, null);
+    const botId = response.playerId;
+    if (!Array.isArray(state.devBotIds)) state.devBotIds = [];
+    if (!state.devBotIds.includes(botId)) state.devBotIds.push(botId);
+    syncRoom(response.room);
+    updateDevBotPanel();
+    scheduleDevBotStep(botId);
+  } catch (error) {
+    alert(`Add bot failed: ${error.message}`);
+  }
+}
 
 function updateLeaveRoomVisibility() {
   const inRoom = Boolean(state.roomCode && state.myPlayerId);
@@ -137,7 +369,8 @@ function ensureFlowObscureLayer() {
   layer.style.position = "fixed";
   layer.style.inset = "0";
   layer.style.pointerEvents = "none";
-  layer.style.zIndex = "40";
+  // Foreground over gameplay; still under menus (overlay uses z-index:100).
+  layer.style.zIndex = "75";
   layer.style.display = "none";
   document.body.appendChild(layer);
   return layer;
@@ -152,20 +385,45 @@ function activeFlowObscureForMe() {
   return null;
 }
 
-function spawnFlowObscureParticle(layer, intensity) {
-  const p = document.createElement("div");
-  p.className = "flow-obscure-particle";
-  const x = Math.random() * 100;
-  const y = Math.random() * 85 + 5;
-  const size = 10 + Math.random() * 26 + intensity * 18;
-  p.style.left = `${x}%`;
-  p.style.top = `${y}%`;
-  p.style.width = `${size}px`;
-  p.style.height = `${size}px`;
-  p.style.opacity = String(0.08 + intensity * 0.18);
-  p.style.filter = `blur(${1 + intensity * 1.75}px)`;
-  layer.appendChild(p);
-  setTimeout(() => p.remove(), 1700);
+function spawnFlowObscureGlitch(layer, intensity) {
+  const el = document.createElement("div");
+  el.className = "flow-obscure-glitch";
+
+  // Bias towards the word + input area (center-ish), but still anywhere on screen.
+  const x = 10 + Math.random() * 80;
+  const y = 14 + Math.random() * 66;
+  el.style.left = `${x}%`;
+  el.style.top = `${y}%`;
+
+  const w = 6 + Math.random() * (18 + intensity * 22); // vw-ish units via % + px
+  const h = 8 + Math.random() * (18 + intensity * 22);
+  el.style.width = `${w.toFixed(1)}vmin`;
+  el.style.height = `${h.toFixed(1)}vmin`;
+
+  const dur = 240 + Math.random() * 320 + intensity * 220;
+  const dx = (Math.random() * 2 - 1) * (18 + intensity * 34);
+  const hue = Math.floor(160 + Math.random() * 80); // neon cyan→pink band
+  const alpha = 0.22 + intensity * 0.28;
+  el.style.setProperty("--gx-dur", `${Math.round(dur)}ms`);
+  el.style.setProperty("--gx-dx", `${dx.toFixed(1)}px`);
+  el.style.setProperty("--gx-hue", String(hue));
+  el.style.setProperty("--gx-a", alpha.toFixed(3));
+
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), Math.round(dur) + 60);
+}
+
+function spawnFlowObscureSweep(layer, intensity) {
+  const el = document.createElement("div");
+  el.className = "flow-obscure-sweep";
+  const y = 12 + Math.random() * 76;
+  el.style.top = `${y}%`;
+  const h = 10 + intensity * 14 + Math.random() * 8;
+  el.style.height = `${h.toFixed(1)}px`;
+  const dur = 260 + Math.random() * 260 + intensity * 220;
+  el.style.setProperty("--sw-dur", `${Math.round(dur)}ms`);
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), Math.round(dur) + 80);
 }
 
 function updateFlowObscureVfx() {
@@ -173,9 +431,11 @@ function updateFlowObscureVfx() {
   const effect = activeFlowObscureForMe();
   if (!effect) {
     layer.style.display = "none";
+    document.body.classList.remove("flow-obscured");
     return;
   }
   layer.style.display = "block";
+  document.body.classList.add("flow-obscured");
 
   const payload = effect.payload && typeof effect.payload === "object" ? effect.payload : {};
   const remainingTicks = typeof payload.remainingTicks === "number" ? payload.remainingTicks : 0;
@@ -185,10 +445,14 @@ function updateFlowObscureVfx() {
   const maxParticles = 90;
   if (existingCount >= maxParticles) return;
 
-  const base = 1 + Math.floor(intensity * 3);
-  const burst = remainingTicks > 40 ? 1 : remainingTicks > 15 ? 0 : -1;
-  const count = Math.max(1, Math.min(4, base + burst));
-  for (let i = 0; i < count; i += 1) spawnFlowObscureParticle(layer, intensity);
+  const base = 4 + Math.floor(intensity * 8);
+  const burst = remainingTicks > 40 ? 4 : remainingTicks > 15 ? 2 : 1;
+  const count = Math.max(4, Math.min(14, base + burst));
+  for (let i = 0; i < count; i += 1) spawnFlowObscureGlitch(layer, intensity);
+
+  // Occasional sweep line that cuts across the typing area.
+  const doSweep = Math.random() < 0.28 + intensity * 0.35;
+  if (doSweep) spawnFlowObscureSweep(layer, intensity);
 }
 
 function ensureFlowHud() {
@@ -539,6 +803,8 @@ function syncRoom(nextRoom) {
 }
 
 function showLobby() {
+  state.devBotsEnabled = isDevBotsEnabled();
+  if (state.devBotsEnabled) updateDevBotPanel();
   els.lobbyCodeDisplay.textContent = state.roomCode || "- - - -";
   els.lobbyScreen.classList.add("show");
   const isCreator = state.room?.creatorId === state.myPlayerId;
@@ -873,6 +1139,7 @@ async function onDecoySuccess() {
 
 async function leaveRoomHandler() {
   try {
+    await removeAllDevBots({ leaveServer: true });
     if (state.roomCode && state.myPlayerId) await leaveRoom(state.roomCode, state.myPlayerId);
   } catch {
     // no-op
@@ -1019,6 +1286,20 @@ function closeRules({ restoreFocus = true } = {}) {
 }
 
 function bindEvents() {
+  state.devBotsEnabled = isDevBotsEnabled();
+  if (state.devBotsEnabled) {
+    updateDevBotPanel();
+    const panel = ensureDevBotPanel();
+    const addBtn = panel.querySelector("#dev-add-bot-btn");
+    const removeBtn = panel.querySelector("#dev-remove-bots-btn");
+    addBtn?.addEventListener("click", () => void addDevBot());
+    removeBtn?.addEventListener("click", () => void removeAllDevBots({ leaveServer: true }));
+    window.addEventListener("beforeunload", () => {
+      // Best effort: stop timers so we don't keep patching during reload.
+      (Array.isArray(state.devBotIds) ? state.devBotIds : []).forEach((id) => stopDevBot(id));
+    });
+  }
+
   els.usernameInput.addEventListener("input", () => {
     const original = els.usernameInput.value;
     const sanitized = original.replace(/[^a-z0-9]/gi, "");

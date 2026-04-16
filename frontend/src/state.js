@@ -15,6 +15,8 @@ export const state = {
   drainInterval: null,
   timerInterval: null,
   secondWindFlashTimeout: null,
+  rulesView: "index",
+  rulesSelectedId: null,
   lastHealthUpdateAt: 0,
   lastRenderAt: 0,
 };

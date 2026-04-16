@@ -35,6 +35,8 @@
 
       <input id="username-input" type="text" placeholder="YOUR USERNAME" class="username-input" maxlength="16" autocomplete="off" autocapitalize="none" spellcheck="false" />
 
+      <button id="rules-btn" class="rules-icon-btn" aria-label="Game rules" title="Rules">i</button>
+
       <div class="button-row">
         <button id="create-btn">CREATE ROOM</button>
         <button id="join-btn">JOIN ROOM</button>
@@ -60,6 +62,16 @@
       </div>
 
       <button id="leave-btn" class="danger">LEAVE ROOM</button>
+    </div>
+
+    <div id="rules-screen" class="overlay">
+      <div class="rules-panel" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+        <div class="rules-panel-header">
+          <div id="rules-title" class="rules-title">HOW TO PLAY</div>
+          <button id="rules-close-btn" class="rules-close" aria-label="Close rules">X</button>
+        </div>
+        <div id="rules-content" class="rules-content"></div>
+      </div>
     </div>
 
     <div id="game-over-screen" class="overlay">

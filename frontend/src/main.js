@@ -285,6 +285,7 @@ function startMultiplayerGame() {
   if (state.gameRunning) return;
 
   state.gameRunning = true;
+  document.body.classList.add("in-game");
   state.myCurrentIndex = 0;
   state.score = 0;
   state.currentWord = getWords()[0] || "survive";
@@ -310,6 +311,7 @@ function stopGameLoops() {
 
 function endGame() {
   state.gameRunning = false;
+  document.body.classList.remove("in-game");
   stopGameLoops();
 
   if (state.score > state.highScore) {
@@ -332,6 +334,7 @@ function endGame() {
 
 function endVictory() {
   state.gameRunning = false;
+  document.body.classList.remove("in-game");
   stopGameLoops();
 
   if (state.score > state.highScore) {

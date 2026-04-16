@@ -28,6 +28,21 @@ header { width: 100%; max-width: 1000px; display: flex; justify-content: space-b
 .health-bar { height: 100%; width: 100%; background: linear-gradient(90deg, #00ff88, #00cc66); transition: width 0.2s ease; box-shadow: 0 0 20px #00ff88; }
 .health-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12px; font-weight: bold; color: #000; text-shadow: 0 0 5px #fff; z-index: 2; width: 100%; text-align: center; }
 main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding: 40px 20px; }
+.in-game {
+  --sidebar-w: clamp(260px, 28vw, 360px);
+}
+.in-game main {
+  /*
+    Keep gameplay horizontally centered.
+    Only reduce the max width when needed to avoid overlapping the fixed sidebar.
+  */
+  max-width: min(1000px, calc(100vw - var(--sidebar-w) - 60px));
+}
+#particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 .word-container { width: 100%; max-width: 800px; background: rgba(0, 0, 0, 0.6); border: 6px solid var(--neon-cyan); border-radius: 12px; padding: 40px 30px; margin-bottom: 40px; box-shadow: 0 0 40px var(--neon-cyan); min-height: 140px; display: flex; align-items: center; justify-content: center; font-size: 3.2rem; letter-spacing: 8px; text-transform: lowercase; }
 .letter { display: inline-block; transition: all 0.1s ease; padding: 2px 4px; margin: 0 2px; border-radius: 4px; }
 .correct { color: #00ff88; text-shadow: 0 0 15px #00ff88; transform: scale(1.1); }
@@ -170,7 +185,48 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .danger:hover { background: #ff0066; color: #0b001a; }
 .final-stats { font-size: 1rem; line-height: 1.8; margin: 30px 0; text-align: center; }
-#multiplayer-sidebar { position: absolute; top: 90px; right: 30px; z-index: 50; min-width: 300px; }
+#multiplayer-sidebar {
+  position: fixed;
+  top: 90px;
+  right: 30px;
+  z-index: 50;
+  width: var(--sidebar-w);
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--neon-cyan) rgba(0, 0, 0, 0.55);
+}
+#multiplayer-sidebar::-webkit-scrollbar {
+  width: 12px;
+}
+#multiplayer-sidebar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 10px;
+}
+#multiplayer-sidebar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--neon-cyan), rgba(255, 0, 170, 0.85));
+  border-radius: 10px;
+  border: 2px solid rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 10px rgba(0, 247, 255, 0.35);
+}
+#multiplayer-sidebar::-webkit-scrollbar-thumb:hover {
+  box-shadow: 0 0 14px rgba(0, 247, 255, 0.6);
+}
+
+@media (max-width: 920px) {
+  .in-game main {
+    max-width: 1000px;
+    padding-right: 20px;
+  }
+  #multiplayer-sidebar {
+    position: fixed;
+    top: 90px;
+    right: 12px;
+    width: min(320px, 44vw);
+  }
+}
 .typo-flash { animation: typoFlashAnim 0.85s ease forwards; }
 .correct-flash { animation: correctFlashAnim 1.1s ease forwards; }
 .bonus-popup { animation: bonusFloat 1.2s ease forwards; }

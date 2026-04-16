@@ -1,5 +1,6 @@
 import { createRoom, joinRoom, leaveRoom, startRoom, subscribeRoomEvents, updatePlayer } from "./api.js";
 import { state } from "./state.js";
+import { deriveActiveEffects, flowGaugeAddForStreak as flowGaugeAddForStreakImpl } from "./gameLogic.js";
 
 const FLOW_GAUGE_MAX = 100;
 const FLOW_GAUGE_ACTIVATE_AT = 0.5;
@@ -20,8 +21,12 @@ function lerp(a, b, t) {
 }
 
 function flowGaugeAddForStreak(streak) {
-  const s = Math.max(1, Math.min(FLOW_STREAK_SOFT_CAP, Math.trunc(Number(streak) || 1)));
-  return FLOW_GAUGE_ADD_BASE + s * FLOW_GAUGE_ADD_MULT;
+  return flowGaugeAddForStreakImpl({
+    streak,
+    softCap: FLOW_STREAK_SOFT_CAP,
+    baseAdd: FLOW_GAUGE_ADD_BASE,
+    multAdd: FLOW_GAUGE_ADD_MULT,
+  });
 }
 
 const els = {
@@ -366,6 +371,7 @@ function ensureFlowObscureLayer() {
   if (existing) return existing;
   const layer = document.createElement("div");
   layer.id = "flow-obscure-layer";
+  layer.dataset.testid = "flow-obscure-layer";
   layer.style.position = "fixed";
   layer.style.inset = "0";
   layer.style.pointerEvents = "none";
@@ -686,7 +692,7 @@ function renderPlayerList() {
     const hp = Math.max(0, player.health || 0);
     const isMe = id === state.myPlayerId;
     html += `
-      <div data-player-id="${id}" style="margin:8px 0">
+      <div data-player-id="${id}" data-testid="player-row" style="margin:8px 0">
         <div style="display:flex;justify-content:space-between">
           <span>${player.username} ${isMe ? "(YOU)" : ""}</span>
           <span style="color:#00ff88">${Math.floor(hp)}%</span>
@@ -758,12 +764,7 @@ function syncRoom(nextRoom) {
   const now = Date.now();
   const effects = Array.isArray(state.room?.effects) ? state.room.effects : [];
   const myId = state.myPlayerId;
-  const active = effects.filter((e) => {
-    if (!e || typeof e.expiresAt !== "number" || e.expiresAt <= now) return false;
-    if (e.targets === "others") return e.sourcePlayerId !== myId;
-    if (Array.isArray(e.targets)) return e.targets.includes(myId);
-    return false;
-  });
+  const active = deriveActiveEffects({ effects, myPlayerId: myId, now });
   state.activeEffects = active;
   updateFlowObscureVfx();
 

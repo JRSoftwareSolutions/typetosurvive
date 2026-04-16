@@ -19,9 +19,9 @@
     </header>
 
     <main>
-      <div id="word-container" class="word-container"><div id="letters"></div></div>
-      <input type="text" id="typing-input" autocomplete="off" spellcheck="false" placeholder="TYPE THE WORD ABOVE..." />
-      <div id="multiplayer-sidebar"></div>
+      <div id="word-container" class="word-container" data-testid="word-container"><div id="letters" data-testid="letters"></div></div>
+      <input type="text" id="typing-input" data-testid="typing-input" autocomplete="off" spellcheck="false" placeholder="TYPE THE WORD ABOVE..." />
+      <div id="multiplayer-sidebar" data-testid="multiplayer-sidebar"></div>
       <div id="particles"></div>
     </main>
 
@@ -33,17 +33,17 @@
         <div class="lobby-subtitle">multiplayer</div>
       </div>
 
-      <input id="username-input" type="text" placeholder="YOUR USERNAME" class="username-input" maxlength="16" autocomplete="off" autocapitalize="none" spellcheck="false" />
+      <input id="username-input" data-testid="username-input" type="text" placeholder="YOUR USERNAME" class="username-input" maxlength="16" autocomplete="off" autocapitalize="none" spellcheck="false" />
 
       <button id="rules-btn" class="rules-icon-btn" aria-label="Game rules" title="Rules">i</button>
 
       <div class="button-row">
-        <button id="create-btn">CREATE ROOM</button>
-        <button id="join-btn">JOIN ROOM</button>
+        <button id="create-btn" data-testid="create-room-btn">CREATE ROOM</button>
+        <button id="join-btn" data-testid="join-room-btn">JOIN ROOM</button>
       </div>
 
       <div class="join-box">
-        <input id="join-code-input" type="text" maxlength="6" placeholder="ROOM CODE" class="code-input" />
+        <input id="join-code-input" data-testid="join-code-input" type="text" maxlength="6" placeholder="ROOM CODE" class="code-input" />
       </div>
 
       <div class="player-list-wrap">
@@ -53,12 +53,12 @@
 
       <div class="room-code-wrap">
         <div class="code-label">ROOM CODE</div>
-        <div id="lobby-code-display" class="code-display">- - - -</div>
+        <div id="lobby-code-display" data-testid="lobby-code-display" class="code-display">- - - -</div>
       </div>
 
       <div id="creator-controls" class="creator-controls">
         <div class="creator-label">YOU ARE THE ROOM CREATOR</div>
-        <button id="start-btn">START GAME FOR EVERYONE</button>
+        <button id="start-btn" data-testid="start-game-btn">START GAME FOR EVERYONE</button>
       </div>
 
       <button id="leave-btn" class="danger">LEAVE ROOM</button>

@@ -185,6 +185,84 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .danger:hover { background: #ff0066; color: #0b001a; }
 .final-stats { font-size: 1rem; line-height: 1.8; margin: 30px 0; text-align: center; }
+.leaderboard {
+  margin: 18px auto 0;
+  width: min(860px, 96vw);
+  background: rgba(0, 0, 0, 0.7);
+  border: 4px solid var(--neon-cyan);
+  border-radius: 10px;
+  padding: 14px 14px 10px;
+  box-shadow: 0 0 22px rgba(0, 247, 255, 0.25);
+  text-align: left;
+}
+.leaderboard-title {
+  color: var(--neon-pink);
+  text-align: center;
+  margin-bottom: 10px;
+  letter-spacing: 0.12em;
+}
+.leaderboard-header,
+.leaderboard-row {
+  display: grid;
+  /* # | NAME | status | survived(0000s) | threat(00) | score(000000) */
+  grid-template-columns: 3ch minmax(12ch, 1fr) 4ch 7ch 4ch 8ch;
+  gap: 10px;
+  align-items: center;
+}
+.leaderboard-icon {
+  text-align: center;
+  font-size: 1.05em;
+  line-height: 1;
+  opacity: 0.95;
+}
+.leaderboard-header {
+  padding: 8px 6px;
+  border-bottom: 2px solid rgba(0, 247, 255, 0.35);
+  opacity: 0.9;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.82);
+}
+.leaderboard-body {
+  max-height: min(40vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--neon-cyan) rgba(0, 0, 0, 0.55);
+}
+.leaderboard-body::-webkit-scrollbar { width: 12px; }
+.leaderboard-body::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.55); border-radius: 10px; }
+.leaderboard-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--neon-cyan), rgba(255, 0, 170, 0.85));
+  border-radius: 10px;
+  border: 2px solid rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 10px rgba(0, 247, 255, 0.35);
+}
+.leaderboard-row {
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(0, 247, 255, 0.14);
+}
+.leaderboard-row:last-child { border-bottom: 0; }
+.leaderboard-rank { color: #fff; opacity: 0.9; }
+.leaderboard-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard-status { text-align: center; opacity: 0.9; }
+.leaderboard-status { font-size: 1.05em; }
+.leaderboard-status,
+.leaderboard-survived,
+.leaderboard-threat,
+.leaderboard-score {
+  text-align: center;
+}
+.leaderboard-score { color: #00ff88; }
+
+@media (max-width: 540px) {
+  .leaderboard-header,
+  .leaderboard-row {
+    grid-template-columns: 3ch minmax(10ch, 1fr) 4ch 7ch 4ch 7ch;
+  }
+}
 #multiplayer-sidebar {
   position: fixed;
   top: 90px;

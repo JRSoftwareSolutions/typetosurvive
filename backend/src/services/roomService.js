@@ -168,10 +168,11 @@ export function createRoom({ username, wordSequence }) {
   while (rooms.has(roomCode)) roomCode = generateRoomCode();
 
   const playerId = randomId("p");
+  const now = Date.now();
   rooms.set(roomCode, {
     roomCode,
     started: false,
-    createdAt: Date.now(),
+    createdAt: now,
     creatorId: playerId,
     wordSequence,
     startedAt: null,
@@ -180,6 +181,17 @@ export function createRoom({ username, wordSequence }) {
     matchEnded: false,
     matchWinnerId: null,
     effects: [],
+    participants: {
+      [playerId]: {
+        username,
+        health: 100,
+        score: 0,
+        deadAt: null,
+        leftAt: null,
+        joinedAt: now,
+        lastSeenAt: now,
+      },
+    },
     players: {
       [playerId]: {
         username,
@@ -206,6 +218,7 @@ export function joinRoom({ roomCode, username, playerId }) {
   );
   const resolvedPlayerId = existingPlayerIdById ?? existingPlayerIdByName ?? randomId("p");
 
+  const now = Date.now();
   room.players[resolvedPlayerId] = {
     username,
     health: 100,
@@ -213,6 +226,19 @@ export function joinRoom({ roomCode, username, playerId }) {
     currentIndex: 0,
     recentSuccesses: [],
     nextEffectAllowedAt: 0,
+  };
+
+  room.participants = room.participants ?? {};
+  const prev = room.participants[resolvedPlayerId] ?? {};
+  room.participants[resolvedPlayerId] = {
+    ...prev,
+    username,
+    health: 100,
+    score: 0,
+    deadAt: typeof prev.deadAt === "number" ? prev.deadAt : null,
+    leftAt: null,
+    joinedAt: typeof prev.joinedAt === "number" ? prev.joinedAt : now,
+    lastSeenAt: now,
   };
 
   emitRoomUpdate(roomCode);
@@ -281,6 +307,20 @@ export function updatePlayer({ roomCode, playerId, patch }) {
   }
 
   room.players[playerId] = next;
+
+  room.participants = room.participants ?? {};
+  const prevParticipant = room.participants[playerId] ?? {};
+  room.participants[playerId] = {
+    ...prevParticipant,
+    username: typeof next.username === "string" ? next.username : prevParticipant.username,
+    health: typeof next.health === "number" ? next.health : prevParticipant.health,
+    score: typeof next.score === "number" ? next.score : prevParticipant.score,
+    deadAt: typeof next.deadAt === "number" ? next.deadAt : prevParticipant.deadAt ?? null,
+    leftAt: typeof prevParticipant.leftAt === "number" ? prevParticipant.leftAt : null,
+    joinedAt: typeof prevParticipant.joinedAt === "number" ? prevParticipant.joinedAt : Date.now(),
+    lastSeenAt: Date.now(),
+  };
+
   maybeEndMatchLastStanding(roomCode, room);
   emitRoomUpdate(roomCode);
   return room.players[playerId];
@@ -289,6 +329,21 @@ export function updatePlayer({ roomCode, playerId, patch }) {
 export function leaveRoom({ roomCode, playerId }) {
   const room = rooms.get(roomCode);
   if (!room?.players?.[playerId]) return false;
+
+  const now = Date.now();
+  room.participants = room.participants ?? {};
+  const prevParticipant = room.participants[playerId] ?? {};
+  const prevPlayer = room.players[playerId] ?? {};
+  room.participants[playerId] = {
+    ...prevParticipant,
+    username: typeof prevPlayer.username === "string" ? prevPlayer.username : prevParticipant.username,
+    health: typeof prevPlayer.health === "number" ? prevPlayer.health : prevParticipant.health,
+    score: typeof prevPlayer.score === "number" ? prevPlayer.score : prevParticipant.score,
+    deadAt: typeof prevPlayer.deadAt === "number" ? prevPlayer.deadAt : prevParticipant.deadAt ?? null,
+    leftAt: now,
+    joinedAt: typeof prevParticipant.joinedAt === "number" ? prevParticipant.joinedAt : now,
+    lastSeenAt: now,
+  };
 
   delete room.players[playerId];
   if (Object.keys(room.players).length === 0) {

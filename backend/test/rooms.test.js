@@ -13,6 +13,30 @@ describe("rooms API (regression)", () => {
     expect(res.body.room.players[res.body.playerId].username).toBe("Alice");
   });
 
+  it("keeps participants for players who leave", async () => {
+    const app = createApp();
+    const createRes = await request(app).post("/api/rooms").send({ username: "A" });
+    expect(createRes.status).toBe(201);
+    const { roomCode, playerId: aId } = createRes.body;
+
+    const joinRes = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "B" });
+    expect(joinRes.status).toBe(200);
+    const bId = joinRes.body.playerId;
+
+    const leaveRes = await request(app).post(`/api/rooms/${roomCode}/leave`).send({ playerId: bId });
+    expect(leaveRes.status).toBe(200);
+
+    const roomRes = await request(app).get(`/api/rooms/${roomCode}`);
+    expect(roomRes.status).toBe(200);
+
+    const participants = roomRes.body.room.participants;
+    expect(participants).toBeTruthy();
+    expect(participants[aId]?.username).toBe("A");
+    expect(participants[bId]?.username).toBe("B");
+    expect(typeof participants[bId]?.leftAt).toBe("number");
+    expect(roomRes.body.room.players[bId]).toBeUndefined();
+  });
+
   it("blocks non-creator from starting", async () => {
     const app = createApp();
     const created = await request(app).post("/api/rooms").send({ username: "Creator" });

@@ -309,6 +309,78 @@ function stopGameLoops() {
   state.timerInterval = null;
 }
 
+function renderLeaderboardHtml() {
+  const room = state.room;
+  const participants = room?.participants && typeof room.participants === "object" ? room.participants : {};
+  const ids = Object.keys(participants);
+  if (ids.length === 0) return "";
+  const startedAt = typeof room?.startedAt === "number" ? room.startedAt : null;
+  const matchNowAt = startedAt != null && typeof room?.elapsedSeconds === "number"
+    ? startedAt + room.elapsedSeconds * 1000
+    : Date.now();
+
+  const rows = ids.map((playerId) => {
+    const p = participants[playerId] || {};
+    const username = typeof p.username === "string" && p.username.length ? p.username : playerId;
+    const score = typeof p.score === "number" ? p.score : 0;
+    const deadAt = typeof p.deadAt === "number" ? p.deadAt : null;
+    const leftAt = typeof p.leftAt === "number" ? p.leftAt : null;
+    const status = deadAt ? "DEAD" : leftAt ? "LEFT" : "ALIVE";
+    const outAt = deadAt ?? leftAt ?? matchNowAt;
+    const isAlive = !deadAt && !leftAt;
+    const isMe = playerId === state.myPlayerId;
+    const survivedSeconds = startedAt == null ? 0 : Math.max(0, Math.floor((outAt - startedAt) / 1000));
+    const threat = Math.max(1, Math.floor(survivedSeconds / 25) + 1);
+    return { playerId, username, score, status, outAt, isAlive, isMe, survivedSeconds, threat };
+  });
+
+  rows.sort((a, b) => {
+    if (a.isAlive !== b.isAlive) return a.isAlive ? -1 : 1;
+    if (a.outAt !== b.outAt) return b.outAt - a.outAt;
+    if (a.score !== b.score) return b.score - a.score;
+    return a.username.localeCompare(b.username);
+  });
+
+  const body = rows.map((r, idx) => {
+    const name = `${r.username}${r.isMe ? " (YOU)" : ""}`;
+    const winnerId = typeof room?.matchWinnerId === "string" ? room.matchWinnerId : null;
+    const statusIcon = r.status === "LEFT"
+      ? "⇦"
+      : winnerId && r.playerId !== winnerId
+        ? "☠"
+        : "♥";
+    return `
+      <div class="leaderboard-row">
+        <div class="leaderboard-rank">${idx + 1}</div>
+        <div class="leaderboard-name">${name}</div>
+        <div class="leaderboard-status" title="${r.status}">${statusIcon}</div>
+        <div class="leaderboard-survived">${String(Math.floor(r.survivedSeconds)).padStart(4, "0")}s</div>
+        <div class="leaderboard-threat">${String(Math.floor(r.threat)).padStart(2, "0")}</div>
+        <div class="leaderboard-score">${String(Math.floor(r.score)).padStart(6, "0")}</div>
+      </div>
+    `;
+  }).join("");
+
+  const html = `
+    <div class="leaderboard">
+      <div class="leaderboard-title">LEADERBOARD</div>
+      <div class="leaderboard-body">
+        <div class="leaderboard-header">
+          <div class="leaderboard-rank">#</div>
+          <div class="leaderboard-name">NAME</div>
+          <div class="leaderboard-status leaderboard-icon" title="Status">♥</div>
+          <div class="leaderboard-survived leaderboard-icon" title="Survived seconds">⏱</div>
+          <div class="leaderboard-threat leaderboard-icon" title="Threat level">!</div>
+          <div class="leaderboard-score leaderboard-icon" title="Score">🏁</div>
+        </div>
+        ${body}
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
 function endGame() {
   state.gameRunning = false;
   document.body.classList.remove("in-game");
@@ -324,10 +396,8 @@ function endGame() {
     els.endScreenTitle.className = "title danger-title";
   }
   els.finalStats.innerHTML = `
-    SURVIVED: ${Math.floor(state.timeSurvived)}s<br>
-    THREAT: ${String(Math.max(1, Math.floor(state.timeSurvived / 25) + 1)).padStart(2, "0")}<br>
-    SCORE: ${String(Math.floor(state.score)).padStart(6, "0")}<br>
     HIGH SCORE: ${String(state.highScore).padStart(6, "0")}
+    ${renderLeaderboardHtml()}
   `;
   els.gameOverScreen.classList.add("show");
 }
@@ -351,10 +421,8 @@ function endVictory() {
   }
   els.finalStats.innerHTML = `
     YOU WON — ${name}<br><br>
-    SURVIVED: ${Math.floor(state.timeSurvived)}s<br>
-    THREAT: ${String(Math.max(1, Math.floor(state.timeSurvived / 25) + 1)).padStart(2, "0")}<br>
-    SCORE: ${String(Math.floor(state.score)).padStart(6, "0")}<br>
     HIGH SCORE: ${String(state.highScore).padStart(6, "0")}
+    ${renderLeaderboardHtml()}
   `;
   els.gameOverScreen.classList.add("show");
 }

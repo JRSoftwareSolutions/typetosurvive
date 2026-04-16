@@ -54,7 +54,22 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
   letter-spacing: 0.06em;
   opacity: 0.55;
 }
-.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 0, 26, 0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; gap: 22px; }
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(11, 0, 26, 0.95);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  gap: 22px;
+  overflow-y: auto;
+  padding: 24px 0;
+}
 .overlay.show { display: flex; }
 .title { font-size: 3rem; text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-pink); letter-spacing: 8px; text-align: center; }
 /* Minecraft-style title: main line + splash angled over bottom-right */
@@ -113,7 +128,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .code-input { border-color: var(--neon-cyan); letter-spacing: 6px; }
 .player-list-wrap { margin-top: 10px; width: 100%; max-width: 420px; }
 .label-pink, .code-label, .creator-label { color: #ff00aa; margin-bottom: 10px; text-align: center; }
-.player-list { background: rgba(0, 0, 0, 0.85); padding: 15px; border: 4px solid var(--neon-cyan); border-radius: 8px; min-height: 160px; width: 100%; }
+.player-list {
+  background: rgba(0, 0, 0, 0.85);
+  padding: 15px;
+  border: 4px solid var(--neon-cyan);
+  border-radius: 8px;
+  min-height: 160px;
+  width: 100%;
+  max-height: clamp(200px, 36vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
 .room-code-wrap { text-align: center; }
 .code-display { font-size: 2.2rem; letter-spacing: 10px; color: #00f7ff; background: rgba(0, 0, 0, 0.6); padding: 10px 20px; border: 4px solid var(--neon-cyan); min-width: 280px; }
 .creator-controls { display: none; text-align: center; }

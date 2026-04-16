@@ -127,6 +127,7 @@ function renderPlayerList() {
 
   els.lobbyPlayerList.innerHTML = html;
   els.multiplayerSidebar.innerHTML = `<div style="background:rgba(0,0,0,0.85);padding:15px;border:4px solid var(--neon-cyan);border-radius:8px">${html}</div>`;
+
 }
 
 function updateUI() {

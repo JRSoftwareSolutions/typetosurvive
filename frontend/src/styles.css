@@ -116,6 +116,9 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
   border-radius: 12px;
   box-shadow: 0 0 30px rgba(0, 247, 255, 0.28);
   padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .rules-panel-header {
   display: flex;
@@ -123,6 +126,7 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 12px;
+  flex: 0 0 auto;
 }
 .rules-title {
   color: var(--neon-pink);
@@ -140,7 +144,8 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
 .rules-content {
   padding: 12px 10px 6px;
   border-top: 2px solid rgba(0, 247, 255, 0.25);
-  max-height: calc(min(78vh, 740px) - 70px);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;

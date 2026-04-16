@@ -10,4 +10,12 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "index.html"),
+        fxLab: resolve(__dirname, "fx-lab.html"),
+      },
+    },
+  },
 });

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FX LAB — TYPE TO SURVIVE</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <style>
+      #fx-lab-panel {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 120;
+        max-width: min(360px, 92vw);
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 3px dashed rgba(0, 247, 255, 0.55);
+        background: rgba(0, 0, 0, 0.82);
+        box-shadow: 0 0 20px rgba(0, 247, 255, 0.15);
+        font-size: 0.78rem;
+        line-height: 1.45;
+        color: #e8f4ff;
+      }
+      #fx-lab-panel h2 {
+        margin: 0 0 8px;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        color: #00f7ff;
+        text-align: center;
+      }
+      #fx-lab-panel .fx-lab-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 8px;
+      }
+      #fx-lab-panel button {
+        cursor: pointer;
+        font-size: 0.72rem;
+        padding: 6px 10px;
+      }
+      #fx-lab-panel .fx-lab-note {
+        margin-top: 10px;
+        opacity: 0.82;
+        font-size: 0.68rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fx-lab-panel" data-testid="fx-lab-panel">
+      <h2>FX LAB (dev)</h2>
+      <div class="fx-lab-note">Loading…</div>
+    </div>
+
+    <div id="app-version" class="app-version" title="Client version">fx-lab</div>
+    <header>
+      <div class="logo">TYPE TO SURVIVE</div>
+      <div class="stats">
+        <div class="stat"><div class="label">SCORE</div><div id="score" class="score-value">000000</div></div>
+        <div class="stat"><div class="label">THREAT LEVEL</div><div id="threat-level" class="threat">01</div></div>
+        <div class="stat">
+          <div class="label">HEALTH</div>
+          <div class="health-container"><div id="health-bar" class="health-bar"></div><div id="health-text" class="health-text">100%</div></div>
+        </div>
+        <div class="stat"><div class="label">SURVIVED</div><div id="time" class="score-value">00:00</div></div>
+      </div>
+    </header>
+
+    <main>
+      <div id="word-container" class="word-container" data-testid="word-container">
+        <div id="letters" data-testid="letters"></div>
+      </div>
+      <input type="text" id="typing-input" data-testid="typing-input" autocomplete="off" spellcheck="false" placeholder="TYPE THE WORD ABOVE..." />
+      <div id="multiplayer-sidebar" data-testid="multiplayer-sidebar"></div>
+      <div id="particles"></div>
+    </main>
+
+    <button id="leave-in-game-btn" class="danger in-game-leave">LEAVE ROOM</button>
+
+    <div id="lobby-screen" class="overlay">
+      <div class="lobby-title-block">
+        <div class="title lobby-main-title">TYPE TO SURVIVE</div>
+        <div class="lobby-subtitle">fx lab (not used)</div>
+      </div>
+
+      <input id="username-input" data-testid="username-input" type="text" placeholder="YOUR USERNAME" class="username-input" maxlength="16" autocomplete="off" autocapitalize="none" spellcheck="false" />
+
+      <button id="rules-btn" class="rules-icon-btn" aria-label="Game rules" title="Rules">i</button>
+
+      <div class="button-row">
+        <button id="create-btn" data-testid="create-room-btn">CREATE ROOM</button>
+        <button id="join-btn" data-testid="join-room-btn">JOIN ROOM</button>
+      </div>
+
+      <div class="join-box">
+        <input id="join-code-input" data-testid="join-code-input" type="text" maxlength="6" placeholder="ROOM CODE" class="code-input" />
+      </div>
+
+      <div class="player-list-wrap">
+        <div class="label-pink">PLAYERS IN ROOM</div>
+        <div id="lobby-player-list" class="player-list"></div>
+      </div>
+
+      <div class="room-code-wrap">
+        <div class="code-label">ROOM CODE</div>
+        <div id="lobby-code-display" data-testid="lobby-code-display" class="code-display">LAB</div>
+      </div>
+
+      <div id="creator-controls" class="creator-controls">
+        <div class="creator-label">YOU ARE THE ROOM CREATOR</div>
+        <button id="start-btn" data-testid="start-game-btn">START GAME FOR EVERYONE</button>
+      </div>
+
+      <button id="leave-btn" class="danger">LEAVE ROOM</button>
+    </div>
+
+    <div id="rules-screen" class="overlay">
+      <div class="rules-panel" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+        <div class="rules-panel-header">
+          <div id="rules-title" class="rules-title">HOW TO PLAY</div>
+          <button id="rules-close-btn" class="rules-close" aria-label="Close rules">X</button>
+        </div>
+        <div id="rules-content" class="rules-content"></div>
+      </div>
+    </div>
+
+    <div id="game-over-screen" class="overlay">
+      <div id="end-screen-title" class="title danger-title">GAME OVER</div>
+      <div id="final-stats" class="final-stats"></div>
+      <button id="leave-after-game-btn" class="danger">LEAVE ROOM</button>
+    </div>
+
+    <script type="module" src="/src/dev/fxLabPage.ts"></script>
+  </body>
+</html>

@@ -88,4 +88,42 @@ describe("multiplayer effects (regression)", () => {
     const after = await request(app).get(`/api/rooms/${roomCode}`);
     expect(after.body.room.effects.length).toBe(0);
   });
+
+  it("creates flowObscure from flowPayout and ticks remainingTicks down over time", async () => {
+    const app = createApp();
+
+    const created = await request(app).post("/api/rooms").send({ username: "A" });
+    const roomCode = created.body.roomCode;
+    const aId = created.body.playerId;
+
+    const joined = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "B" });
+    const bId = joined.body.playerId;
+    expect(bId).not.toBe(aId);
+
+    const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
+    expect(startRes.status).toBe(200);
+
+    const payoutRes = await request(app)
+      .patch(`/api/rooms/${roomCode}/players/${aId}`)
+      .send({ flowPayout: 10, flowLastEndedAt: Date.now(), flowActive: false });
+    expect(payoutRes.status).toBe(200);
+
+    const roomRes = await request(app).get(`/api/rooms/${roomCode}`);
+    expect(roomRes.status).toBe(200);
+    const fx = roomRes.body.room.effects.find((e) => e.type === "flowObscure");
+    expect(fx).toBeTruthy();
+    expect(fx.sourcePlayerId).toBe(aId);
+    expect(fx.targets).toBe("others");
+    expect(typeof fx.expiresAt).toBe("number");
+    expect(typeof fx.payload?.remainingTicks).toBe("number");
+    expect(fx.payload.remainingTicks).toBe(10);
+
+    await vi.advanceTimersByTimeAsync(1200);
+    const after = (await request(app).get(`/api/rooms/${roomCode}`)).body.room;
+    const fxAfter = after.effects.find((e) => e.type === "flowObscure");
+    expect(fxAfter).toBeTruthy();
+    expect(typeof fxAfter.payload?.remainingTicks).toBe("number");
+    expect(fxAfter.payload.remainingTicks).toBeLessThan(10);
+    expect(fxAfter.payload.remainingTicks).toBeGreaterThanOrEqual(0);
+  });
 });

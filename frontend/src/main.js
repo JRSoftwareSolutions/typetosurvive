@@ -1,6 +1,24 @@
 import { createRoom, joinRoom, leaveRoom, startRoom, subscribeRoomEvents, updatePlayer } from "./api.js";
 import { state } from "./state.js";
 
+const FLOW_GAUGE_MAX = 100;
+const FLOW_GAUGE_ACTIVATE_AT = 0.5;
+const FLOW_STREAK_SOFT_CAP = 8;
+const FLOW_FACTORIAL_ADD_CAP = 30;
+const FLOW_MIN_MS = 8000;
+const FLOW_MAX_MS = 12000;
+
+function lerp(a, b, t) {
+  const tt = Math.max(0, Math.min(1, t));
+  return a + (b - a) * tt;
+}
+
+function factorial(n) {
+  let v = 1;
+  for (let i = 2; i <= n; i += 1) v *= i;
+  return v;
+}
+
 const els = {
   letters: document.getElementById("letters"),
   input: document.getElementById("typing-input"),
@@ -111,6 +129,268 @@ function ensureSecondWindBanner() {
   return banner;
 }
 
+function ensureFlowObscureLayer() {
+  const existing = document.getElementById("flow-obscure-layer");
+  if (existing) return existing;
+  const layer = document.createElement("div");
+  layer.id = "flow-obscure-layer";
+  layer.style.position = "fixed";
+  layer.style.inset = "0";
+  layer.style.pointerEvents = "none";
+  layer.style.zIndex = "40";
+  layer.style.display = "none";
+  document.body.appendChild(layer);
+  return layer;
+}
+
+function activeFlowObscureForMe() {
+  const effects = Array.isArray(state.activeEffects) ? state.activeEffects : [];
+  for (let i = 0; i < effects.length; i += 1) {
+    const e = effects[i];
+    if (e && e.type === "flowObscure") return e;
+  }
+  return null;
+}
+
+function spawnFlowObscureParticle(layer, intensity) {
+  const p = document.createElement("div");
+  p.className = "flow-obscure-particle";
+  const x = Math.random() * 100;
+  const y = Math.random() * 85 + 5;
+  const size = 10 + Math.random() * 26 + intensity * 18;
+  p.style.left = `${x}%`;
+  p.style.top = `${y}%`;
+  p.style.width = `${size}px`;
+  p.style.height = `${size}px`;
+  p.style.opacity = String(0.08 + intensity * 0.18);
+  p.style.filter = `blur(${1 + intensity * 1.75}px)`;
+  layer.appendChild(p);
+  setTimeout(() => p.remove(), 1700);
+}
+
+function updateFlowObscureVfx() {
+  const layer = ensureFlowObscureLayer();
+  const effect = activeFlowObscureForMe();
+  if (!effect) {
+    layer.style.display = "none";
+    return;
+  }
+  layer.style.display = "block";
+
+  const payload = effect.payload && typeof effect.payload === "object" ? effect.payload : {};
+  const remainingTicks = typeof payload.remainingTicks === "number" ? payload.remainingTicks : 0;
+  const intensity = Math.max(0, Math.min(1, typeof payload.intensity === "number" ? payload.intensity : 0.25));
+
+  const existingCount = layer.childElementCount;
+  const maxParticles = 90;
+  if (existingCount >= maxParticles) return;
+
+  const base = 1 + Math.floor(intensity * 3);
+  const burst = remainingTicks > 40 ? 1 : remainingTicks > 15 ? 0 : -1;
+  const count = Math.max(1, Math.min(4, base + burst));
+  for (let i = 0; i < count; i += 1) spawnFlowObscureParticle(layer, intensity);
+}
+
+function ensureFlowHud() {
+  const existing = document.getElementById("flow-hud");
+  if (existing) return existing;
+
+  const wrap = document.createElement("div");
+  wrap.id = "flow-hud";
+  wrap.style.position = "fixed";
+  wrap.style.left = "50%";
+  wrap.style.bottom = "22px";
+  wrap.style.transform = "translateX(-50%)";
+  wrap.style.zIndex = "55";
+  wrap.style.pointerEvents = "none";
+  wrap.style.display = "none";
+  wrap.style.width = "min(640px, calc(100vw - 40px))";
+
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.alignItems = "center";
+  row.style.justifyContent = "space-between";
+  row.style.gap = "14px";
+  row.style.padding = "10px 12px";
+  row.style.border = "3px solid rgba(0, 247, 255, 0.7)";
+  row.style.borderRadius = "12px";
+  row.style.background = "rgba(0,0,0,0.78)";
+  row.style.boxShadow = "0 0 18px rgba(0,247,255,0.25)";
+
+  const left = document.createElement("div");
+  left.style.display = "flex";
+  left.style.flexDirection = "column";
+  left.style.gap = "6px";
+  left.style.minWidth = "160px";
+
+  const title = document.createElement("div");
+  title.textContent = "FLOW";
+  title.style.color = "#00f7ff";
+  title.style.letterSpacing = "0.16em";
+  title.style.fontSize = "12px";
+  title.style.textShadow = "0 0 10px rgba(0,247,255,0.25)";
+  left.appendChild(title);
+
+  const hint = document.createElement("div");
+  hint.id = "flow-hint";
+  hint.style.fontSize = "10px";
+  hint.style.opacity = "0.85";
+  hint.style.letterSpacing = "0.08em";
+  hint.style.color = "rgba(255,255,255,0.9)";
+  left.appendChild(hint);
+
+  const barOuter = document.createElement("div");
+  barOuter.style.flex = "1";
+  barOuter.style.height = "16px";
+  barOuter.style.background = "rgba(17,17,17,0.9)";
+  barOuter.style.border = "3px solid rgba(255, 0, 170, 0.65)";
+  barOuter.style.borderRadius = "10px";
+  barOuter.style.overflow = "hidden";
+
+  const barInner = document.createElement("div");
+  barInner.id = "flow-gauge-bar";
+  barInner.style.height = "100%";
+  barInner.style.width = "0%";
+  barInner.style.background = "linear-gradient(90deg, rgba(255,0,170,0.85), rgba(0,247,255,0.9))";
+  barInner.style.boxShadow = "0 0 18px rgba(255,0,170,0.35)";
+  barInner.style.transition = "width 0.18s ease";
+  barOuter.appendChild(barInner);
+
+  const right = document.createElement("div");
+  right.style.display = "flex";
+  right.style.flexDirection = "column";
+  right.style.alignItems = "flex-end";
+  right.style.gap = "6px";
+  right.style.minWidth = "110px";
+
+  const pct = document.createElement("div");
+  pct.id = "flow-gauge-text";
+  pct.style.fontSize = "12px";
+  pct.style.letterSpacing = "0.12em";
+  pct.style.color = "#ff00aa";
+  pct.style.textShadow = "0 0 12px rgba(255,0,170,0.35)";
+  right.appendChild(pct);
+
+  const counter = document.createElement("div");
+  counter.id = "flow-counter";
+  counter.style.fontSize = "14px";
+  counter.style.letterSpacing = "0.12em";
+  counter.style.color = "#00ff88";
+  counter.style.textShadow = "0 0 14px rgba(0,255,136,0.3)";
+  counter.style.display = "none";
+  right.appendChild(counter);
+
+  row.appendChild(left);
+  row.appendChild(barOuter);
+  row.appendChild(right);
+  wrap.appendChild(row);
+  document.body.appendChild(wrap);
+  return wrap;
+}
+
+function updateFlowHud() {
+  const hud = ensureFlowHud();
+  const gauge = Math.max(0, Math.min(FLOW_GAUGE_MAX, Number(state.flowGauge) || 0));
+  const pct = Math.round((gauge / FLOW_GAUGE_MAX) * 100);
+  hud.style.display = state.gameRunning ? "block" : "none";
+
+  const bar = document.getElementById("flow-gauge-bar");
+  if (bar) bar.style.width = `${pct}%`;
+
+  const text = document.getElementById("flow-gauge-text");
+  if (text) text.textContent = `${String(pct).padStart(3, " ")}%`;
+
+  const hint = document.getElementById("flow-hint");
+  if (hint) {
+    const canActivate = !state.flowActive && gauge >= FLOW_GAUGE_MAX * FLOW_GAUGE_ACTIVATE_AT;
+    hint.textContent = state.flowActive ? "ACTIVE" : canActivate ? "PRESS ENTER" : "BUILD (PERFECT WORDS)";
+    hint.style.color = canActivate ? "#fff" : "rgba(255,255,255,0.9)";
+    hint.style.textShadow = canActivate ? "0 0 12px rgba(255,255,255,0.35)" : "none";
+  }
+
+  const counter = document.getElementById("flow-counter");
+  if (counter) {
+    if (state.flowActive) {
+      counter.style.display = "block";
+      const v = Math.trunc(Number(state.flowCounter) || 0);
+      counter.textContent = v >= 0 ? `+${v}` : `${v}`;
+      counter.style.color = v >= 0 ? "#00ff88" : "#ff0066";
+      counter.style.textShadow = v >= 0 ? "0 0 14px rgba(0,255,136,0.3)" : "0 0 14px rgba(255,0,102,0.35)";
+    } else {
+      counter.style.display = "none";
+    }
+  }
+}
+
+function endFlow({ now = Date.now() } = {}) {
+  if (!state.flowActive) return;
+  state.flowActive = false;
+  state.flowEndsAt = 0;
+
+  const payout = Math.max(0, Math.trunc(Number(state.flowCounter) || 0));
+  updateUI();
+
+  if (state.roomCode && state.myPlayerId) {
+    updatePlayer(state.roomCode, state.myPlayerId, {
+      flowActive: false,
+      flowPayout: payout,
+      flowLastEndedAt: now,
+    }).catch(() => {});
+  }
+}
+
+function maybeEndFlowIfExpired(now = Date.now()) {
+  if (!state.flowActive) return;
+  const endsAt = Number(state.flowEndsAt) || 0;
+  if (endsAt > 0 && now >= endsAt) endFlow({ now });
+}
+
+function applyFlowInputDelta(typed, target) {
+  if (!state.flowActive) return;
+
+  const now = Date.now();
+  maybeEndFlowIfExpired(now);
+  if (!state.flowActive) return;
+
+  const prev = String(state.flowLastInputValue || "");
+  const next = String(typed || "");
+  if (next === prev) return;
+
+  const prevLower = prev.toLowerCase();
+  const nextLower = next.toLowerCase();
+  const targetLower = String(target || "").toLowerCase();
+
+  // Backspace / edits: update baseline but don’t modify counter (tuning knob).
+  if (nextLower.length <= prevLower.length) {
+    state.flowLastInputValue = next;
+    updateUI();
+    return;
+  }
+
+  // Compute newly-added suffix (assumes typical append typing).
+  let prefixLen = 0;
+  const maxPrefix = Math.min(prevLower.length, nextLower.length);
+  while (prefixLen < maxPrefix && prevLower[prefixLen] === nextLower[prefixLen]) prefixLen += 1;
+
+  for (let i = prefixLen; i < nextLower.length; i += 1) {
+    const tChar = targetLower[i] ?? "";
+    const nChar = nextLower[i] ?? "";
+    const correct = tChar && nChar === tChar;
+    if (correct) {
+      state.flowCounter = (Number(state.flowCounter) || 0) + 1;
+      continue;
+    }
+    state.flowCounter = (Number(state.flowCounter) || 0) - 1;
+    state.flowLastInputValue = next;
+    updateUI();
+    endFlow({ now });
+    return;
+  }
+
+  state.flowLastInputValue = next;
+  updateUI();
+}
+
 function getWords() {
   return state.room?.wordSequence ?? [];
 }
@@ -159,6 +439,8 @@ function renderPlayerList() {
 }
 
 function updateUI() {
+  maybeEndFlowIfExpired();
+
   const hp = Math.max(0, Math.min(100, state.health));
   els.healthBar.style.width = `${hp}%`;
   els.healthText.textContent = `${Math.floor(hp)}%`;
@@ -175,6 +457,8 @@ function updateUI() {
   const effectiveElapsed = Math.max(0, state.timeSurvived - resetAt);
   const threat = Math.min(15, Math.floor(effectiveElapsed / 22)) + 1;
   els.threat.textContent = String(threat).padStart(2, "0");
+
+  updateFlowHud();
 }
 
 function flashPlayer(playerId, className, timeoutMs) {
@@ -217,6 +501,7 @@ function syncRoom(nextRoom) {
     return false;
   });
   state.activeEffects = active;
+  updateFlowObscureVfx();
 
   const banner = ensureEffectBanner();
   const decoyActive = Boolean(getActiveDecoyForMe());
@@ -333,6 +618,14 @@ function startMultiplayerGame() {
   state.myCurrentIndex = 0;
   state.score = 0;
   state.currentWord = getWords()[0] || "survive";
+  state.flowGauge = 0;
+  state.flowStreakPerfectWords = 0;
+  state.flowWordHadTypo = false;
+  state.flowActive = false;
+  state.flowEndsAt = 0;
+  state.flowCounter = 0;
+  state.flowLastInputValue = "";
+  state.flowLastCharEffectAt = 0;
   els.lobbyScreen.classList.remove("show");
   els.gameOverScreen.classList.remove("show");
   if (els.endScreenTitle) {
@@ -429,6 +722,7 @@ function endGame() {
   state.gameRunning = false;
   document.body.classList.remove("in-game");
   stopGameLoops();
+  state.flowActive = false;
 
   if (state.score > state.highScore) {
     state.highScore = Math.floor(state.score);
@@ -450,6 +744,7 @@ function endVictory() {
   state.gameRunning = false;
   document.body.classList.remove("in-game");
   stopGameLoops();
+  state.flowActive = false;
 
   if (state.score > state.highScore) {
     state.highScore = Math.floor(state.score);
@@ -512,12 +807,31 @@ function updateLetterColors(typed) {
     } else span.className = "letter pending";
   });
 
+  if (hasTypo && !state.flowWordHadTypo) {
+    state.flowWordHadTypo = true;
+    state.flowGauge = 0;
+    state.flowStreakPerfectWords = 0;
+  }
+
   if (hasTypo && state.roomCode && state.myPlayerId) {
     updatePlayer(state.roomCode, state.myPlayerId, { lastTypo: Date.now() }).catch(() => {});
   }
 }
 
 function success() {
+  if (!state.flowActive) {
+    if (!state.flowWordHadTypo) {
+      state.flowStreakPerfectWords = Math.max(0, (Number(state.flowStreakPerfectWords) || 0) + 1);
+      const n = Math.min(FLOW_STREAK_SOFT_CAP, state.flowStreakPerfectWords);
+      const add = Math.min(factorial(n), FLOW_FACTORIAL_ADD_CAP);
+      state.flowGauge = Math.min(FLOW_GAUGE_MAX, (Number(state.flowGauge) || 0) + add);
+    } else {
+      state.flowStreakPerfectWords = 0;
+      state.flowGauge = 0;
+    }
+  }
+  state.flowWordHadTypo = false;
+
   const len = state.currentWord.length;
   let bonus = 15 + len * 7;
   if (len >= 10) bonus += 28;
@@ -534,6 +848,7 @@ function success() {
       score: state.score,
       currentIndex: state.myCurrentIndex,
       lastSuccess: Date.now(),
+      flowGauge: state.flowGauge,
     }).catch(() => {});
   }
 
@@ -747,6 +1062,7 @@ function bindEvents() {
     const typed = e.target.value.trim();
     updateLetterColors(typed);
     const target = typingTargetWord();
+    applyFlowInputDelta(typed, target);
     if (typed.toLowerCase() === target.toLowerCase()) {
       if (getActiveDecoyForMe()) void onDecoySuccess();
       else success();
@@ -754,6 +1070,36 @@ function bindEvents() {
   });
 
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      if (!state.gameRunning) return;
+      if (els.rulesScreen?.classList.contains("show")) return;
+      if (document.activeElement !== els.input) return;
+
+      const gauge = Math.max(0, Math.min(FLOW_GAUGE_MAX, Number(state.flowGauge) || 0));
+      const canActivate = !state.flowActive && gauge >= FLOW_GAUGE_MAX * FLOW_GAUGE_ACTIVATE_AT;
+      if (!canActivate) return;
+
+      e.preventDefault();
+      state.flowActive = true;
+      state.flowCounter = 0;
+      state.flowLastInputValue = String(els.input.value || "");
+      state.flowLastCharEffectAt = 0;
+      const durationMs = Math.floor(lerp(FLOW_MIN_MS, FLOW_MAX_MS, gauge / FLOW_GAUGE_MAX));
+      state.flowEndsAt = Date.now() + durationMs;
+      state.flowGauge = 0;
+      state.flowStreakPerfectWords = 0;
+      state.flowWordHadTypo = false;
+
+      updateUI();
+
+      if (state.roomCode && state.myPlayerId) {
+        updatePlayer(state.roomCode, state.myPlayerId, {
+          flowGauge: state.flowGauge,
+          flowActive: true,
+        }).catch(() => {});
+      }
+      return;
+    }
     if (e.key !== "Escape") return;
     if (els.rulesScreen?.classList.contains("show")) {
       closeRules();

@@ -20,4 +20,14 @@ export const state = {
   rulesIndexScrollTop: 0,
   lastHealthUpdateAt: 0,
   lastRenderAt: 0,
+
+  // Flow state (new mechanic)
+  flowGauge: 0,
+  flowStreakPerfectWords: 0,
+  flowWordHadTypo: false,
+  flowActive: false,
+  flowEndsAt: 0,
+  flowCounter: 0,
+  flowLastInputValue: "",
+  flowLastCharEffectAt: 0,
 };

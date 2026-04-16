@@ -8,6 +8,9 @@ const EFFECT_DURATION_MS = 11000;
 const EFFECT_COOLDOWN_MS = 9000;
 const DECOY_LENGTH = 7;
 
+const FLOW_OBSCURE_TICK_MS = 350;
+const FLOW_OBSCURE_MAX_TICKS = 80;
+
 function randomId(prefix = "p") {
   return `${prefix}_${Date.now()}${Math.floor(Math.random() * 1000)}`;
 }
@@ -144,6 +147,29 @@ function tickRoom(roomCode) {
       p.deadAt = p.deadAt ?? now;
     }
   });
+
+  if (Array.isArray(room.effects) && room.effects.length) {
+    room.effects.forEach((e) => {
+      if (!e || e.type !== "flowObscure") return;
+      const payload = e.payload && typeof e.payload === "object" ? e.payload : {};
+      const remaining = typeof payload.remainingTicks === "number" ? payload.remainingTicks : 0;
+      if (remaining <= 0) {
+        e.expiresAt = now - 1;
+        return;
+      }
+      const last = typeof payload.lastTickAt === "number" ? payload.lastTickAt : e.createdAt ?? now;
+      const diff = Math.max(0, now - last);
+      const steps = Math.floor(diff / FLOW_OBSCURE_TICK_MS);
+      if (steps <= 0) return;
+      const nextRemaining = Math.max(0, remaining - steps);
+      e.payload = {
+        ...payload,
+        remainingTicks: nextRemaining,
+        lastTickAt: last + steps * FLOW_OBSCURE_TICK_MS,
+      };
+      e.expiresAt = now + nextRemaining * FLOW_OBSCURE_TICK_MS;
+    });
+  }
 
   maybeEndMatchLastStanding(roomCode, room);
 
@@ -288,6 +314,29 @@ export function updatePlayer({ roomCode, playerId, patch }) {
   };
 
   const now = Date.now();
+  if (typeof playerPatch?.flowPayout === "number" && Number.isFinite(playerPatch.flowPayout)) {
+    const payout = Math.max(0, Math.floor(playerPatch.flowPayout));
+    const ticks = Math.max(0, Math.min(FLOW_OBSCURE_MAX_TICKS, payout));
+    const victimIds = Object.keys(room.players).filter((id) => id !== playerId);
+    if (ticks > 0 && victimIds.length > 0) {
+      const intensity = Math.max(0, Math.min(1, ticks / FLOW_OBSCURE_MAX_TICKS));
+      const effect = {
+        id: randomId("fx"),
+        type: "flowObscure",
+        sourcePlayerId: playerId,
+        targets: "others",
+        createdAt: now,
+        expiresAt: now + ticks * FLOW_OBSCURE_TICK_MS,
+        payload: {
+          remainingTicks: ticks,
+          intensity,
+          lastTickAt: now,
+        },
+      };
+      room.effects = Array.isArray(room.effects) ? room.effects : [];
+      room.effects.push(effect);
+    }
+  }
   const lowAt = typeof next.secondWindLowAt === "number" ? next.secondWindLowAt : null;
   const canSecondWind = !next.secondWindUsed && lowAt != null && now - lowAt <= 2000;
   const healedHigh = typeof next.health === "number" && next.health >= 80;

@@ -3,24 +3,25 @@ import { state } from "./state.js";
 
 const FLOW_GAUGE_MAX = 100;
 const FLOW_GAUGE_ACTIVATE_AT = 0.5;
-const FLOW_STREAK_SOFT_CAP = 8;
-const FLOW_FACTORIAL_ADD_CAP = 30;
+const FLOW_STREAK_SOFT_CAP = 12;
+// New growth model (combo-multiplier), tuned for ~4–6 perfect words to reach 50%.
+const FLOW_GAUGE_ADD_BASE = 6;
+const FLOW_GAUGE_ADD_MULT = 6;
 const FLOW_MIN_MS = 8000;
 const FLOW_MAX_MS = 12000;
 
 const DEV_BOT_CHAR_MS = 500;
 const DEV_BOT_WORD_PAUSE_MS = 500;
-const DEV_BOT_JITTER_MS = 250;
+const DEV_BOT_JITTER_MS = 85;
 
 function lerp(a, b, t) {
   const tt = Math.max(0, Math.min(1, t));
   return a + (b - a) * tt;
 }
 
-function factorial(n) {
-  let v = 1;
-  for (let i = 2; i <= n; i += 1) v *= i;
-  return v;
+function flowGaugeAddForStreak(streak) {
+  const s = Math.max(1, Math.min(FLOW_STREAK_SOFT_CAP, Math.trunc(Number(streak) || 1)));
+  return FLOW_GAUGE_ADD_BASE + s * FLOW_GAUGE_ADD_MULT;
 }
 
 const els = {
@@ -242,8 +243,7 @@ function scheduleDevBotStep(botId) {
       flow.counter = (Number(flow.counter) || 0) + targetWord.length;
     } else {
       flow.streak = Math.max(0, (Number(flow.streak) || 0) + 1);
-      const n = Math.min(FLOW_STREAK_SOFT_CAP, flow.streak);
-      const add = Math.min(factorial(n), FLOW_FACTORIAL_ADD_CAP);
+      const add = flowGaugeAddForStreak(flow.streak);
       flow.gauge = Math.min(FLOW_GAUGE_MAX, (Number(flow.gauge) || 0) + add);
     }
     try {
@@ -1088,8 +1088,7 @@ function success() {
   if (!state.flowActive) {
     if (!state.flowWordHadTypo) {
       state.flowStreakPerfectWords = Math.max(0, (Number(state.flowStreakPerfectWords) || 0) + 1);
-      const n = Math.min(FLOW_STREAK_SOFT_CAP, state.flowStreakPerfectWords);
-      const add = Math.min(factorial(n), FLOW_FACTORIAL_ADD_CAP);
+      const add = flowGaugeAddForStreak(state.flowStreakPerfectWords);
       state.flowGauge = Math.min(FLOW_GAUGE_MAX, (Number(state.flowGauge) || 0) + add);
     } else {
       state.flowStreakPerfectWords = 0;

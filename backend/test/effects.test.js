@@ -96,12 +96,21 @@ describe("multiplayer effects (regression)", () => {
     const roomCode = created.body.roomCode;
     const aId = created.body.playerId;
 
-    const joined = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "B" });
-    const bId = joined.body.playerId;
+    const joinedB = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "B" });
+    const bId = joinedB.body.playerId;
+    const joinedC = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "C" });
+    const cId = joinedC.body.playerId;
     expect(bId).not.toBe(aId);
+    expect(cId).not.toBe(aId);
+    expect(cId).not.toBe(bId);
 
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
     expect(startRes.status).toBe(200);
+
+    // Set scores so B is closest to A.
+    await request(app).patch(`/api/rooms/${roomCode}/players/${aId}`).send({ score: 500 });
+    await request(app).patch(`/api/rooms/${roomCode}/players/${bId}`).send({ score: 520 });
+    await request(app).patch(`/api/rooms/${roomCode}/players/${cId}`).send({ score: 900 });
 
     const payoutRes = await request(app)
       .patch(`/api/rooms/${roomCode}/players/${aId}`)
@@ -113,7 +122,9 @@ describe("multiplayer effects (regression)", () => {
     const fx = roomRes.body.room.effects.find((e) => e.type === "flowObscure");
     expect(fx).toBeTruthy();
     expect(fx.sourcePlayerId).toBe(aId);
-    expect(fx.targets).toBe("others");
+    expect(Array.isArray(fx.targets)).toBe(true);
+    expect(fx.targets.length).toBe(1);
+    expect(fx.targets[0]).toBe(bId);
     expect(typeof fx.expiresAt).toBe("number");
     expect(typeof fx.payload?.remainingTicks).toBe("number");
     expect(fx.payload.remainingTicks).toBe(10);
@@ -125,5 +136,38 @@ describe("multiplayer effects (regression)", () => {
     expect(typeof fxAfter.payload?.remainingTicks).toBe("number");
     expect(fxAfter.payload.remainingTicks).toBeLessThan(10);
     expect(fxAfter.payload.remainingTicks).toBeGreaterThanOrEqual(0);
+  });
+
+  it("targets a random tied closest-score opponent for flowObscure", async () => {
+    const app = createApp();
+
+    const created = await request(app).post("/api/rooms").send({ username: "A" });
+    const roomCode = created.body.roomCode;
+    const aId = created.body.playerId;
+
+    const joinedB = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "B" });
+    const bId = joinedB.body.playerId;
+    const joinedC = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "C" });
+    const cId = joinedC.body.playerId;
+
+    const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
+    expect(startRes.status).toBe(200);
+
+    // Tie: B and C are equally close to A's score.
+    await request(app).patch(`/api/rooms/${roomCode}/players/${aId}`).send({ score: 500 });
+    await request(app).patch(`/api/rooms/${roomCode}/players/${bId}`).send({ score: 550 });
+    await request(app).patch(`/api/rooms/${roomCode}/players/${cId}`).send({ score: 450 });
+
+    const payoutRes = await request(app)
+      .patch(`/api/rooms/${roomCode}/players/${aId}`)
+      .send({ flowPayout: 10, flowLastEndedAt: Date.now(), flowActive: false });
+    expect(payoutRes.status).toBe(200);
+
+    const roomRes = await request(app).get(`/api/rooms/${roomCode}`);
+    const fx = roomRes.body.room.effects.find((e) => e.type === "flowObscure");
+    expect(fx).toBeTruthy();
+    expect(Array.isArray(fx.targets)).toBe(true);
+    expect(fx.targets.length).toBe(1);
+    expect([bId, cId]).toContain(fx.targets[0]);
   });
 });

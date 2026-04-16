@@ -319,12 +319,25 @@ export function updatePlayer({ roomCode, playerId, patch }) {
     const ticks = Math.max(0, Math.min(FLOW_OBSCURE_MAX_TICKS, payout));
     const victimIds = Object.keys(room.players).filter((id) => id !== playerId);
     if (ticks > 0 && victimIds.length > 0) {
+      const sourceScore = typeof prev.score === "number" ? prev.score : 0;
+      const candidates = victimIds.map((vid) => {
+        const v = room.players?.[vid];
+        const vScore = typeof v?.score === "number" ? v.score : 0;
+        return { id: vid, diff: Math.abs(vScore - sourceScore) };
+      });
+      const minDiff = candidates.reduce((m, c) => Math.min(m, c.diff), Number.POSITIVE_INFINITY);
+      const tied = candidates.filter((c) => c.diff === minDiff);
+      const victimId = tied[Math.floor(Math.random() * tied.length)]?.id ?? null;
+      if (!victimId) {
+        // No eligible victim (shouldn't happen given victimIds.length check).
+        // Skip effect creation.
+      } else {
       const intensity = Math.max(0, Math.min(1, ticks / FLOW_OBSCURE_MAX_TICKS));
       const effect = {
         id: randomId("fx"),
         type: "flowObscure",
         sourcePlayerId: playerId,
-        targets: "others",
+        targets: [victimId],
         createdAt: now,
         expiresAt: now + ticks * FLOW_OBSCURE_TICK_MS,
         payload: {
@@ -335,6 +348,7 @@ export function updatePlayer({ roomCode, playerId, patch }) {
       };
       room.effects = Array.isArray(room.effects) ? room.effects : [];
       room.effects.push(effect);
+      }
     }
   }
   const lowAt = typeof next.secondWindLowAt === "number" ? next.secondWindLowAt : null;

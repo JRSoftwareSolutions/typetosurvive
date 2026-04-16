@@ -1,0 +1,2 @@
+{"sessionId":"0cbdcb","runId":"pre-fix","hypothesisId":"H1","location":"ui/render.ts:renderLeaderboardHtml","message":"leaderboard_html_built","data":{"outerClass":"leaderboard","rowCount":1,"htmlLen":1053},"timestamp":1776373686563}
+{"sessionId":"0cbdcb","runId":"pre-fix","hypothesisId":"H2","location":"game/game.ts:endGame","message":"finalStats_dom_after_render","data":{"hasFinalStats":true,"leaderboardCount":1,"leaderWrapCount":0,"htmlLen":1217},"timestamp":1776373686563}

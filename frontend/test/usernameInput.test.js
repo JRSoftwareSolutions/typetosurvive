@@ -31,8 +31,8 @@ function setupDom() {
 describe("username input sanitization", () => {
   beforeEach(async () => {
     setupDom();
-    // Import after DOM exists (main.js binds listeners on import)
-    await import("../src/main.js");
+    // Import after DOM exists (entrypoint binds listeners on import)
+    await import("../src/main.ts");
   });
 
   it("strips non a-z0-9 characters but preserves casing", () => {

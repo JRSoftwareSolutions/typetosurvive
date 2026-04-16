@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveActiveEffects, flowGaugeAddForStreak } from "../src/gameLogic.js";
+import { deriveActiveEffects, flowGaugeAddForStreak } from "../src/gameLogic.ts";
 
 describe("gameLogic", () => {
   it("flowGaugeAddForStreak uses base + streak*mult with soft cap", () => {

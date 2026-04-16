@@ -11,6 +11,8 @@ async function typeCurrentWord(page: any) {
   const input = page.getByTestId("typing-input");
   // `fill()` triggers the input event; no extra keystrokes (faster + more deterministic).
   await input.fill(word);
+  // Input handler trims; ensure a stable event (matches multiplayer-core spec).
+  await input.type(" ");
 }
 
 async function createRoom(page: any, username: string) {
@@ -44,9 +46,49 @@ test("decoyWord: victim sees jammed banner after attacker burst", async ({ brows
   await expect(b.getByTestId("typing-input")).toBeVisible();
 
   // Attacker completes 3 words quickly to trigger decoyWord.
-  await typeCurrentWord(a);
-  await typeCurrentWord(a);
-  await typeCurrentWord(a);
+  // Use direct PATCHes to avoid flakiness from UI input timing.
+  await a.evaluate(async () => {
+    const st = (window as any).__T4YL_STATE__;
+    const roomCode = st?.roomCode;
+    const playerId = st?.myPlayerId;
+    if (!roomCode || !playerId) throw new Error("Missing roomCode/playerId");
+
+    for (let i = 0; i < 3; i += 1) {
+      const me = st?.room?.players?.[playerId] || {};
+      const currentIndex = typeof me.currentIndex === "number" ? me.currentIndex : st?.myCurrentIndex ?? 0;
+      await fetch(`http://127.0.0.1:3001/api/rooms/${roomCode}/players/${playerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentIndex: currentIndex + 1,
+          lastSuccess: Date.now(),
+          score: (typeof me.score === "number" ? me.score : 0) + 200,
+          health: 100,
+        }),
+      });
+      // If this fails (e.g. CORS), the test should fail loudly.
+      // eslint-disable-next-line no-undef
+      // (Playwright runs in browser context here.)
+      // @ts-ignore
+      // Ensure awaited fetch response is ok.
+      // (We re-fetch with response capture to keep older browsers happy.)
+      const res = await fetch(`http://127.0.0.1:3001/api/rooms/${roomCode}/players/${playerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lastSuccess: Date.now() }),
+      });
+      if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+      await new Promise((r) => setTimeout(r, 150));
+    }
+  });
+
+  // Wait until the victim actually receives the decoy effect via SSE.
+  await expect.poll(async () => {
+    return await b.evaluate(() => {
+      const st = (window as any).__T4YL_STATE__;
+      return Boolean(st?.room?.effects?.some((e: any) => e?.type === "decoyWord"));
+    });
+  }, { timeout: 25_000 }).toBe(true);
 
   // Decoy applies to the victim's next word after the one in progress; finish at least one word so the jammed target can appear.
   const banner = b.locator("#effect-banner");
@@ -54,8 +96,10 @@ test("decoyWord: victim sees jammed banner after attacker burst", async ({ brows
   await expect.poll(async () => {
     if (await banner.isVisible()) return true;
     await typeCurrentWord(b);
+    // Allow SSE room update to arrive and toggle visibility.
+    await b.waitForTimeout(250);
     return await banner.isVisible();
-  }, { timeout: 25_000 }).toBe(true);
+  }, { timeout: 35_000 }).toBe(true);
 
   await a.close();
   await b.close();

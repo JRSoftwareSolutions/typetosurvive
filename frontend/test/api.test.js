@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { joinRoom } from "../src/api.js";
+import { joinRoom } from "../src/api.ts";
 
 describe("frontend api client (regression)", () => {
   const originalFetch = globalThis.fetch;

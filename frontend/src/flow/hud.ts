@@ -1,11 +1,15 @@
 import { state } from "../state";
 
+const HUD_DOM_VERSION = "2";
+
 export function ensureFlowHud() {
   const existing = document.getElementById("flow-hud");
-  if (existing) return existing;
+  if (existing?.dataset.flowHudVersion === HUD_DOM_VERSION) return existing;
+  if (existing) existing.remove();
 
   const wrap = document.createElement("div");
   wrap.id = "flow-hud";
+  wrap.dataset.flowHudVersion = HUD_DOM_VERSION;
   wrap.className = "flow-hud-wrap";
   wrap.style.position = "fixed";
   wrap.style.left = "50%";
@@ -20,20 +24,23 @@ export function ensureFlowHud() {
   row.id = "flow-hud-row";
   row.className = "flow-hud-row";
   row.style.display = "flex";
-  row.style.alignItems = "center";
-  row.style.justifyContent = "space-between";
-  row.style.gap = "14px";
+  row.style.flexDirection = "column";
+  row.style.alignItems = "stretch";
+  row.style.gap = "8px";
   row.style.padding = "10px 12px";
   row.style.border = "3px solid rgba(0, 247, 255, 0.7)";
   row.style.borderRadius = "12px";
   row.style.background = "rgba(0,0,0,0.78)";
   row.style.boxShadow = "0 0 18px rgba(0,247,255,0.25)";
 
-  const left = document.createElement("div");
-  left.style.display = "flex";
-  left.style.flexDirection = "column";
-  left.style.gap = "6px";
-  left.style.minWidth = "160px";
+  const topRow = document.createElement("div");
+  topRow.id = "flow-hud-top";
+  topRow.style.display = "flex";
+  topRow.style.flexDirection = "row";
+  topRow.style.alignItems = "flex-start";
+  topRow.style.justifyContent = "space-between";
+  topRow.style.gap = "12px";
+  topRow.style.width = "100%";
 
   const title = document.createElement("div");
   title.textContent = "FLOW";
@@ -41,40 +48,14 @@ export function ensureFlowHud() {
   title.style.letterSpacing = "0.16em";
   title.style.fontSize = "12px";
   title.style.textShadow = "0 0 10px rgba(0,247,255,0.25)";
-  left.appendChild(title);
-
-  const hint = document.createElement("div");
-  hint.id = "flow-hint";
-  hint.style.fontSize = "10px";
-  hint.style.opacity = "0.85";
-  hint.style.letterSpacing = "0.08em";
-  hint.style.color = "rgba(255,255,255,0.9)";
-  left.appendChild(hint);
-
-  const barOuter = document.createElement("div");
-  barOuter.id = "flow-gauge-outer";
-  barOuter.style.flex = "1";
-  barOuter.style.height = "16px";
-  barOuter.style.background = "rgba(17,17,17,0.9)";
-  barOuter.style.border = "3px solid rgba(255, 0, 170, 0.65)";
-  barOuter.style.borderRadius = "10px";
-  barOuter.style.overflow = "hidden";
-
-  const barInner = document.createElement("div");
-  barInner.id = "flow-gauge-bar";
-  barInner.style.height = "100%";
-  barInner.style.width = "0%";
-  barInner.style.background = "linear-gradient(90deg, rgba(255,0,170,0.85), rgba(0,247,255,0.9))";
-  barInner.style.boxShadow = "0 0 18px rgba(255,0,170,0.35)";
-  barInner.style.transition = "width 0.18s ease";
-  barOuter.appendChild(barInner);
+  title.style.flexShrink = "0";
 
   const right = document.createElement("div");
   right.style.display = "flex";
   right.style.flexDirection = "column";
   right.style.alignItems = "flex-end";
-  right.style.gap = "6px";
-  right.style.minWidth = "110px";
+  right.style.gap = "4px";
+  right.style.flexShrink = "0";
 
   const pct = document.createElement("div");
   pct.id = "flow-gauge-text";
@@ -93,9 +74,43 @@ export function ensureFlowHud() {
   counter.style.display = "none";
   right.appendChild(counter);
 
-  row.appendChild(left);
+  topRow.appendChild(title);
+  topRow.appendChild(right);
+
+  const barOuter = document.createElement("div");
+  barOuter.id = "flow-gauge-outer";
+  barOuter.style.width = "100%";
+  barOuter.style.flex = "0 0 auto";
+  barOuter.style.height = "16px";
+  barOuter.style.background = "rgba(17,17,17,0.9)";
+  barOuter.style.border = "3px solid rgba(255, 0, 170, 0.65)";
+  barOuter.style.borderRadius = "10px";
+  barOuter.style.overflow = "hidden";
+  barOuter.style.boxSizing = "border-box";
+
+  const barInner = document.createElement("div");
+  barInner.id = "flow-gauge-bar";
+  barInner.style.height = "100%";
+  barInner.style.width = "0%";
+  barInner.style.background = "linear-gradient(90deg, rgba(255,0,170,0.85), rgba(0,247,255,0.9))";
+  barInner.style.boxShadow = "0 0 18px rgba(255,0,170,0.35)";
+  barInner.style.transition = "width 0.18s ease";
+  barOuter.appendChild(barInner);
+
+  const hint = document.createElement("div");
+  hint.id = "flow-hint";
+  hint.style.fontSize = "10px";
+  hint.style.opacity = "0.85";
+  hint.style.letterSpacing = "0.08em";
+  hint.style.color = "rgba(255,255,255,0.9)";
+  hint.style.textAlign = "center";
+  hint.style.width = "100%";
+  hint.style.lineHeight = "1.35";
+  hint.style.wordBreak = "break-word";
+
+  row.appendChild(topRow);
   row.appendChild(barOuter);
-  row.appendChild(right);
+  row.appendChild(hint);
   wrap.appendChild(row);
   document.body.appendChild(wrap);
   return wrap;

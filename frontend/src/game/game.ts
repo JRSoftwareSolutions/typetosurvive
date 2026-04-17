@@ -1,6 +1,7 @@
 import { leaveRoom, updatePlayer } from "../api";
 import { FLOW_GAUGE_MAX, FLOW_HEALTH_MULT_WHILE_ACTIVE } from "../constants";
 import { els } from "../dom/els";
+import { triggerFlowWordSlotAnimation } from "../flow/foresight";
 import { flowGaugeFillOnPerfectWord } from "../gameLogic";
 import { state } from "../state";
 import { getWords } from "./selectors";
@@ -103,6 +104,12 @@ export function success() {
   if (len >= 13) bonus += 22;
   if (state.flowActive) bonus = Math.floor(bonus * FLOW_HEALTH_MULT_WHILE_ACTIVE);
 
+  const words = getWords();
+  const slideFromForesight =
+    state.flowActive &&
+    typeof words[state.myCurrentIndex + 1] === "string" &&
+    words[state.myCurrentIndex + 1]!.length > 0;
+
   state.health = Math.min(100, state.health + bonus);
   state.score += len * 18 + 50;
   state.myCurrentIndex += 1;
@@ -122,6 +129,7 @@ export function success() {
   updateUI();
   els.input.value = "";
   renderWord();
+  if (slideFromForesight) triggerFlowWordSlotAnimation();
 }
 
 export async function leaveRoomAndReload(removeAllDevBots: (opts: { leaveServer: boolean }) => Promise<void>) {

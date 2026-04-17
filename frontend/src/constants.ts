@@ -1,10 +1,10 @@
 export const FLOW_GAUGE_MAX = 100;
 export const FLOW_GAUGE_ACTIVATE_AT = 0.5;
 
-/** Per clean word: base fill before diminishing curve. */
-export const FLOW_GAUGE_FILL_BASE = 24;
+/** Per clean word: base fill before diminishing curve (tuned so ~4+ clean words reach 50%). */
+export const FLOW_GAUGE_FILL_BASE = 15;
 /** Exponent on (gauge/max) for diminishing returns on fill. */
-export const FLOW_GAUGE_FILL_DIMINISH_POW = 1.7;
+export const FLOW_GAUGE_FILL_DIMINISH_POW = 1.78;
 
 /** Elastic pullback: subtract `mult * (gauge/max)^pow * (dtMs / elasticDtReferenceMs)` per drain tick. */
 export const FLOW_ELASTIC_PULL_MULT = 0.6;

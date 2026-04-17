@@ -2,6 +2,31 @@ import { els } from "../dom/els";
 import { getWords } from "../game/selectors";
 import { state } from "../state";
 
+/** One-shot motion: former Foresight “next” word settles into the active typing row (Flow only). */
+export function triggerFlowWordSlotAnimation() {
+  const el = els.letters;
+  if (!el) return;
+
+  el.classList.remove("letters--flow-enter");
+  void el.offsetWidth;
+
+  const done = () => {
+    el.classList.remove("letters--flow-enter");
+    el.removeEventListener("animationend", onEnd);
+  };
+
+  const onEnd = (ev: Event) => {
+    if (ev.target !== el) return;
+    const ae = ev as AnimationEvent;
+    if (ae.animationName !== "flow-word-slot-enter") return;
+    done();
+  };
+
+  el.addEventListener("animationend", onEnd);
+  el.classList.add("letters--flow-enter");
+  window.setTimeout(done, 420);
+}
+
 export function updateForesightPreview() {
   const el = els.foresightWord;
   if (!el) return;

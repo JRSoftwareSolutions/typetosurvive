@@ -20,7 +20,7 @@ import {
   stopDevBot,
   updateDevBotPanel,
 } from "./dev/devBots";
-import { closeRules, openRules, renderRules } from "./ui/rules";
+import { closeRules, openRules } from "./ui/rules";
 
 function flowGaugeAddForStreak(streak: number) {
   return flowGaugeAddForStreakImpl({
@@ -139,7 +139,6 @@ bindEvents({
   leaveRoomHandler,
   openRules,
   closeRules,
-  renderRules,
   onDecoySuccess,
   updateLetterColors,
   flowGaugeAddForStreak,

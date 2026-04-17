@@ -1,138 +1,269 @@
 import { els } from "../dom/els";
 import { state } from "../state";
 
-type RuleItem = {
+/** Panel ids: `index` plus card ids used in navigation stack and data-rules-* */
+export const RULES_PANEL_INDEX = "index";
+
+type RuleCard = {
   id: string;
-  kind: "buff" | "debuff";
   title: string;
   subtitle: string;
   implemented: boolean;
 };
 
-const RULE_ITEMS: RuleItem[] = [
-  { id: "secondWind", kind: "buff", title: "SECOND WIND", subtitle: "Threat reset", implemented: true },
-  { id: "comingSoonBuff1", kind: "buff", title: "COMING SOON", subtitle: "New buff", implemented: false },
-  { id: "comingSoonBuff2", kind: "buff", title: "COMING SOON", subtitle: "New buff", implemented: false },
-  { id: "decoyWord", kind: "debuff", title: "DECOY WORD", subtitle: "Fake next word", implemented: true },
-  { id: "comingSoonDebuff1", kind: "debuff", title: "COMING SOON", subtitle: "New debuff", implemented: false },
-  { id: "comingSoonDebuff2", kind: "debuff", title: "COMING SOON", subtitle: "New debuff", implemented: false },
+const MECHANIC_CARDS: RuleCard[] = [
+  {
+    id: "threatLevel",
+    title: "THREAT LEVEL",
+    subtitle: "Time pressure — faster drain as it rises",
+    implemented: true,
+  },
+  {
+    id: "score",
+    title: "SCORE",
+    subtitle: "Points for finished words",
+    implemented: true,
+  },
+  {
+    id: "flowState",
+    title: "FLOW STATE",
+    subtitle: "Focus mode, bonus, and interference",
+    implemented: true,
+  },
 ];
 
-function rulesIndexHtml() {
-  const buffs = RULE_ITEMS.filter((i) => i.kind === "buff");
-  const debuffs = RULE_ITEMS.filter((i) => i.kind === "debuff");
-  const card = (i: RuleItem) => `
-    <button class="rules-card" type="button" data-rules-id="${i.id}">
-      <div class="rules-card-title">${i.title}</div>
-      <div class="rules-card-sub">${i.subtitle}</div>
-      ${i.implemented ? "" : `<div class="rules-card-tag">COMING SOON</div>`}
+const EFFECT_CARDS: RuleCard[] = [
+  {
+    id: "secondWind",
+    title: "SECOND WIND",
+    subtitle: "One threat reset per match",
+    implemented: true,
+  },
+  {
+    id: "jammed",
+    title: "JAMMED",
+    subtitle: "Fake word from an opponent streak",
+    implemented: true,
+  },
+  { id: "comingSoonBuff1", title: "COMING SOON", subtitle: "New buff", implemented: false },
+  { id: "comingSoonDebuff1", title: "COMING SOON", subtitle: "New debuff", implemented: false },
+];
+
+function rulesCurrentId(): string {
+  const s = state.rulesNavStack;
+  return s.length ? s[s.length - 1]! : RULES_PANEL_INDEX;
+}
+
+function updateRulesBackButton() {
+  const btn = els.rulesBackBtn;
+  if (!btn) return;
+  const show = state.rulesNavStack.length > 1;
+  btn.style.visibility = show ? "visible" : "hidden";
+  btn.setAttribute("aria-hidden", show ? "false" : "true");
+  btn.tabIndex = show ? 0 : -1;
+}
+
+/** Inline “link” that opens another rules card (pushes onto nav stack). */
+export function rulesLink(panelId: string, label: string): string {
+  return `<button type="button" class="rules-link" data-rules-link="${panelId}">${label}</button>`;
+}
+
+function cardButton(c: RuleCard): string {
+  return `
+    <button class="rules-card" type="button" data-rules-id="${c.id}">
+      <div class="rules-card-title">${c.title}</div>
+      <div class="rules-card-sub">${c.subtitle}</div>
+      ${c.implemented ? "" : `<div class="rules-card-tag">COMING SOON</div>`}
     </button>
   `;
+}
 
+function rulesIndexHtml(): string {
+  const mechanics = MECHANIC_CARDS.map(cardButton).join("");
+  const effects = EFFECT_CARDS.map(cardButton).join("");
   return `
-    <div class="rules-section">
+    <div class="rules-section rules-goal">
       <div class="rules-h">GOAL</div>
-      <div class="rules-p">Type words to survive longer than your opponents.</div>
-      <div class="rules-p"><span class="rules-k">WIN</span>: be the last player alive. <span class="rules-k">LOSE</span>: your health reaches 0.</div>
+      <div class="rules-p">
+        Finish words by typing them correctly. Each finished word heals you and adds to your ${rulesLink("score", "score")}.
+      </div>
+      <div class="rules-p">
+        Your health also drains slowly over time. The ${rulesLink("threatLevel", "threat level")} makes that drain faster as the match goes on—see ${rulesLink("threatLevel", "Threat level")} for details and ${rulesLink("secondWind", "Second Wind")}.
+      </div>
+      <div class="rules-p">
+        Build ${rulesLink("flowState", "Flow")} for a timed bonus; a strong finish can ${rulesLink("flowState", "mess with a rival’s screen")}.
+      </div>
+      <div class="rules-p">
+        <span class="rules-k">Win:</span> be the last player standing. <span class="rules-k">Lose:</span> your health reaches zero. Watch out for ${rulesLink("jammed", "Jammed")} after an opponent goes on a tear.
+      </div>
     </div>
 
     <div class="rules-section">
-      <div class="rules-h">THREAT LEVEL</div>
-      <div class="rules-p">Threat increases over time and makes health drain faster.</div>
-      <div class="rules-p">Threat ramps about every <span class="rules-k">22 seconds</span> (capped). <span class="rules-k">Second Wind</span> resets your threat back to 01 once per match.</div>
+      <div class="rules-h">CORE SYSTEMS</div>
+      <div class="rules-grid rules-grid-mechanics">
+        ${mechanics}
+      </div>
     </div>
 
     <div class="rules-section">
-      <div class="rules-h">SCORE</div>
-      <div class="rules-p">Score increases when you complete a word.</div>
-      <div class="rules-p">On each success: <span class="rules-k">score += wordLength * 18 + 50</span></div>
-    </div>
-
-    <div class="rules-section">
-      <div class="rules-h">BUFFS & DEBUFFS</div>
-      <div class="rules-grid">
-        <div class="rules-col">
-          <div class="rules-col-title">BUFFS</div>
-          ${buffs.map(card).join("")}
-        </div>
-        <div class="rules-col">
-          <div class="rules-col-title">DEBUFFS</div>
-          ${debuffs.map(card).join("")}
-        </div>
+      <div class="rules-h">BUFFS &amp; DEBUFFS</div>
+      <div class="rules-grid rules-grid-effects">
+        ${effects}
       </div>
     </div>
   `;
 }
 
-function rulesDetailHtml(itemId: string) {
-  const item = RULE_ITEMS.find((i) => i.id === itemId) ?? null;
-  const title = item?.title ?? "DETAILS";
-  if (!item) {
-    return `
-      <button class="rules-back" type="button" data-rules-action="back">← BACK</button>
-      <div class="rules-section">
-        <div class="rules-h">${title}</div>
-        <div class="rules-p">Not found.</div>
-      </div>
-    `;
+function rulesDetailHtml(panelId: string): string {
+  switch (panelId) {
+    case "threatLevel":
+      return `
+        <div class="rules-section">
+          <div class="rules-h">THREAT LEVEL</div>
+          <div class="rules-p">
+            Threat is the number shown in your HUD. It climbs as match time passes—about every 22 seconds it can step up, up to a maximum. Higher threat means your passive health drain gets faster.
+          </div>
+          <div class="rules-p">
+            ${rulesLink("secondWind", "Second Wind")} (once per match) resets your threat timing so you effectively start climbing from the bottom again.
+          </div>
+          <div class="rules-p">
+            Getting ${rulesLink("jammed", "Jammed")} does not change threat; it changes the word you must type for a short time.
+          </div>
+        </div>
+      `;
+    case "score":
+      return `
+        <div class="rules-section">
+          <div class="rules-h">SCORE</div>
+          <div class="rules-p">
+            You earn score every time you complete a word. Longer words give more points than short ones.
+          </div>
+          <div class="rules-p">
+            Score is mostly for bragging rights and tie-break feel—but when ${rulesLink("flowState", "Flow")} ends, interference usually goes to whoever is closest to you on the scoreboard.
+          </div>
+        </div>
+      `;
+    case "flowState":
+      return `
+        <div class="rules-section">
+          <div class="rules-h">FLOW STATE</div>
+          <div class="rules-p">
+            When you finish words <em>without a typo on that word</em>, your Flow gauge fills. A typo on a word clears the gauge and resets that streak.
+          </div>
+          <div class="rules-p">
+            When the gauge is at least half full, press <span class="rules-k">Enter</span> to enter Flow. You stay in Flow for several seconds (longer if the gauge was fuller—about 8 to 12 seconds).
+          </div>
+          <div class="rules-p">
+            During Flow, only correct keystrokes toward the current word add to a bonus counter. A wrong keystroke cuts the bonus down and can end Flow early.
+          </div>
+        </div>
+        <div class="rules-section rules-subsection" id="rules-flow-interference">
+          <div class="rules-h">Interference</div>
+          <div class="rules-p">
+            When Flow ends, that bonus is sent to the server. Another player—usually whoever has the score closest to yours—gets brief screen interference (glitch-style visuals). How intense it is depends on how strong your Flow finish was.
+          </div>
+          <div class="rules-p">
+            Related: ${rulesLink("threatLevel", "Threat level")}, ${rulesLink("score", "Score")}, ${rulesLink("jammed", "Jammed")}.
+          </div>
+        </div>
+      `;
+    case "secondWind":
+      return `
+        <div class="rules-section">
+          <div class="rules-h">SECOND WIND</div>
+          <div class="rules-p">
+            Once per match. If your health drops <em>below 20%</em>, then within about <span class="rules-k">2 seconds</span> you heal back up to <span class="rules-k">80% health or higher</span>, your threat clock resets—you effectively start climbing threat from the beginning again.
+          </div>
+          <div class="rules-p">
+            See also: ${rulesLink("threatLevel", "Threat level")}.
+          </div>
+        </div>
+      `;
+    case "jammed":
+      return `
+        <div class="rules-section">
+          <div class="rules-h">JAMMED</div>
+          <div class="rules-p">
+            If an opponent finishes <span class="rules-k">three words within about five seconds</span>, other players can get Jammed (there is a cooldown so it cannot spam constantly). The effect lasts a bit over ten seconds.
+          </div>
+          <div class="rules-p">
+            While Jammed, after you finish the word you were already on, your <em>next</em> typing target becomes a fake word until you complete it. You will see the on-screen <span class="rules-k">JAMMED!</span> banner when it applies to you.
+          </div>
+          <div class="rules-p">
+            See also: ${rulesLink("threatLevel", "Threat level")}, ${rulesLink("flowState", "Flow")}.
+          </div>
+        </div>
+      `;
+    default: {
+      const all = [...MECHANIC_CARDS, ...EFFECT_CARDS];
+      const c = all.find((x) => x.id === panelId);
+      if (!c) {
+        return `
+          <div class="rules-section">
+            <div class="rules-h">NOT FOUND</div>
+            <div class="rules-p">This topic is missing.</div>
+          </div>
+        `;
+      }
+      if (!c.implemented) {
+        return `
+          <div class="rules-section">
+            <div class="rules-h">${c.title}</div>
+            <div class="rules-p">Coming soon.</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="rules-section">
+          <div class="rules-h">${c.title}</div>
+          <div class="rules-p">Details unavailable.</div>
+        </div>
+      `;
+    }
   }
-
-  if (!item.implemented) {
-    return `
-      <button class="rules-back" type="button" data-rules-action="back">← BACK</button>
-      <div class="rules-section">
-        <div class="rules-h">${title}</div>
-        <div class="rules-p">Coming soon.</div>
-      </div>
-    `;
-  }
-
-  if (item.id === "secondWind") {
-    return `
-      <button class="rules-back" type="button" data-rules-action="back">← BACK</button>
-      <div class="rules-section">
-        <div class="rules-h">SECOND WIND</div>
-        <div class="rules-p"><span class="rules-k">Once per match</span>.</div>
-        <div class="rules-p"><span class="rules-k">Trigger</span>: health drops below <span class="rules-k">20%</span>, then you recover to <span class="rules-k">80%+</span> within <span class="rules-k">2 seconds</span>.</div>
-        <div class="rules-p"><span class="rules-k">Effect</span>: your threat resets to <span class="rules-k">01</span> and ramps again.</div>
-      </div>
-    `;
-  }
-
-  if (item.id === "decoyWord") {
-    return `
-      <button class="rules-back" type="button" data-rules-action="back">← BACK</button>
-      <div class="rules-section">
-        <div class="rules-h">DECOY WORD</div>
-        <div class="rules-p"><span class="rules-k">Trigger</span>: an opponent gets <span class="rules-k">3 successes within 5 seconds</span> (with a short cooldown).</div>
-        <div class="rules-p"><span class="rules-k">Effect</span>: after you finish the word you’re on when it hits, your <span class="rules-k">next</span> target becomes a fake word until you complete it.</div>
-      </div>
-    `;
-  }
-
-  return `
-    <button class="rules-back" type="button" data-rules-action="back">← BACK</button>
-    <div class="rules-section">
-      <div class="rules-h">${title}</div>
-      <div class="rules-p">Details unavailable.</div>
-    </div>
-  `;
 }
 
 export function renderRules() {
   if (!els.rulesContent) return;
-  if (state.rulesView === "detail" && typeof state.rulesSelectedId === "string") {
-    els.rulesContent.innerHTML = rulesDetailHtml(state.rulesSelectedId);
-    return;
+  const id = rulesCurrentId();
+  if (id === RULES_PANEL_INDEX) {
+    els.rulesContent.innerHTML = rulesIndexHtml();
+    els.rulesContent.scrollTop =
+      typeof state.rulesIndexScrollTop === "number" ? state.rulesIndexScrollTop : 0;
+  } else {
+    els.rulesContent.innerHTML = rulesDetailHtml(id);
+    els.rulesContent.scrollTop = 0;
   }
-  els.rulesContent.innerHTML = rulesIndexHtml();
-  els.rulesContent.scrollTop = typeof state.rulesIndexScrollTop === "number" ? state.rulesIndexScrollTop : 0;
+  updateRulesBackButton();
+}
+
+/** Save index scroll position, push panel id, re-render. Call from event handler. */
+export function rulesNavigatePush(panelId: string) {
+  if (rulesCurrentId() === RULES_PANEL_INDEX && els.rulesContent) {
+    state.rulesIndexScrollTop = els.rulesContent.scrollTop;
+  }
+  state.rulesNavStack.push(panelId);
+  renderRules();
+}
+
+export function rulesNavigatePop(): boolean {
+  if (state.rulesNavStack.length <= 1) return false;
+  state.rulesNavStack.pop();
+  renderRules();
+  return true;
+}
+
+/** Jump to the rules index and clear navigation history (stack is only `index`). */
+export function rulesNavigateHome() {
+  state.rulesNavStack = [RULES_PANEL_INDEX];
+  state.rulesIndexScrollTop = 0;
+  renderRules();
 }
 
 export function openRules() {
   if (!els.rulesScreen) return;
-  state.rulesView = "index";
-  state.rulesSelectedId = null;
+  state.rulesNavStack = [RULES_PANEL_INDEX];
+  state.rulesIndexScrollTop = 0;
   renderRules();
   els.rulesScreen.classList.add("show");
 }
@@ -144,4 +275,3 @@ export function closeRules({ restoreFocus = true }: { restoreFocus?: boolean } =
     els.usernameInput?.focus?.();
   }
 }
-

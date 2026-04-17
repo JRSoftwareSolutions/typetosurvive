@@ -67,6 +67,34 @@
     <div id="rules-screen" class="overlay">
       <div class="rules-panel" role="dialog" aria-modal="true" aria-labelledby="rules-title">
         <div class="rules-panel-header">
+          <div class="rules-header-left">
+            <button
+              id="rules-home-btn"
+              type="button"
+              class="rules-header-home"
+              aria-label="Rules overview — reset navigation"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linejoin="round"
+                  d="M3 10.5 12 3l9 7.5M5 10v11h5v-6h4v6h5V10"
+                />
+              </svg>
+            </button>
+            <button
+              id="rules-back-btn"
+              type="button"
+              class="rules-header-back"
+              aria-label="Back"
+              aria-hidden="true"
+              tabindex="-1"
+            >
+              ← BACK
+            </button>
+          </div>
           <div id="rules-title" class="rules-title">HOW TO PLAY</div>
           <button id="rules-close-btn" class="rules-close" aria-label="Close rules">X</button>
         </div>

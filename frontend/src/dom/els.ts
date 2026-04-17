@@ -25,6 +25,8 @@ export const els = {
   particles: document.getElementById("particles") as HTMLElement,
   rulesBtn: document.getElementById("rules-btn") as HTMLButtonElement | null,
   rulesScreen: document.getElementById("rules-screen") as HTMLElement | null,
+  rulesHomeBtn: document.getElementById("rules-home-btn") as HTMLButtonElement | null,
+  rulesBackBtn: document.getElementById("rules-back-btn") as HTMLButtonElement | null,
   rulesCloseBtn: document.getElementById("rules-close-btn") as HTMLButtonElement | null,
   rulesContent: document.getElementById("rules-content") as HTMLElement | null,
 };

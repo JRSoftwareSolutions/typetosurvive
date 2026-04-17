@@ -42,8 +42,6 @@ export type RoomDto = {
   wordSequence?: string[];
 };
 
-export type RulesView = "index" | "detail";
-
 export type State = {
   roomCode: string;
   room: RoomDto | null;
@@ -61,8 +59,8 @@ export type State = {
   drainInterval: number | null;
   timerInterval: number | null;
   secondWindFlashTimeout: number | null;
-  rulesView: RulesView;
-  rulesSelectedId: string | null;
+  /** Navigation stack: last entry is the visible panel (`index` or a card id). */
+  rulesNavStack: string[];
   rulesIndexScrollTop: number;
   lastHealthUpdateAt: number;
   lastRenderAt: number;
@@ -100,8 +98,7 @@ export const state: State = {
   drainInterval: null,
   timerInterval: null,
   secondWindFlashTimeout: null,
-  rulesView: "index",
-  rulesSelectedId: null,
+  rulesNavStack: ["index"],
   rulesIndexScrollTop: 0,
   lastHealthUpdateAt: 0,
   lastRenderAt: 0,

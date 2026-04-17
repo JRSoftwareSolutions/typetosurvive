@@ -11,6 +11,7 @@ import { applyFlowInputDelta } from "../flow/flow";
 import { endGame, success } from "../game/game";
 import { state } from "../state";
 import { updateUI } from "../ui/render";
+import { rulesNavigateHome, rulesNavigatePop, rulesNavigatePush } from "../ui/rules";
 import { updateLeaveRoomVisibility } from "../ui/visibility";
 import { lerp } from "../utils/math";
 
@@ -21,7 +22,6 @@ export type BindEventsOpts = {
   leaveRoomHandler: () => void;
   openRules: () => void;
   closeRules: (opts?: { restoreFocus?: boolean }) => void;
-  renderRules: () => void;
   onDecoySuccess: () => void | Promise<void>;
   updateLetterColors: (typed: string) => void;
   flowGaugeAddForStreak: (streak: number) => number;
@@ -64,27 +64,30 @@ export function bindEvents(opts: BindEventsOpts) {
   els.leaveInGameBtn.addEventListener("click", opts.leaveRoomHandler);
   els.rulesBtn?.addEventListener("click", opts.openRules);
   els.rulesCloseBtn?.addEventListener("click", () => opts.closeRules());
+  els.rulesHomeBtn?.addEventListener("click", () => {
+    rulesNavigateHome();
+  });
+  els.rulesBackBtn?.addEventListener("click", () => {
+    rulesNavigatePop();
+  });
   els.rulesScreen?.addEventListener("click", (e) => {
     if (e.target === els.rulesScreen) opts.closeRules();
   });
   els.rulesContent?.addEventListener("click", (e) => {
     const target = e.target instanceof Element ? e.target : null;
     if (!target) return;
-    const back = target.closest("[data-rules-action='back']");
-    if (back) {
-      state.rulesView = "index";
-      state.rulesSelectedId = null;
-      opts.renderRules();
+    const link = target.closest("[data-rules-link]");
+    if (link) {
+      const id = link.getAttribute("data-rules-link");
+      if (!id) return;
+      rulesNavigatePush(id);
       return;
     }
     const card = target.closest("[data-rules-id]");
     if (card) {
       const id = card.getAttribute("data-rules-id");
       if (!id) return;
-      state.rulesIndexScrollTop = els.rulesContent?.scrollTop ?? 0;
-      state.rulesView = "detail";
-      state.rulesSelectedId = id;
-      opts.renderRules();
+      rulesNavigatePush(id);
     }
   });
 
@@ -133,7 +136,11 @@ export function bindEvents(opts: BindEventsOpts) {
     }
     if (e.key !== "Escape") return;
     if (els.rulesScreen?.classList.contains("show")) {
-      opts.closeRules();
+      if (state.rulesNavStack.length > 1) {
+        rulesNavigatePop();
+      } else {
+        opts.closeRules();
+      }
       return;
     }
     if (state.gameRunning) endGame();

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/app.js";
+import { DECOY_WORD } from "../src/constants.js";
 
 describe("multiplayer effects (regression)", () => {
   beforeEach(() => {
@@ -45,7 +46,7 @@ describe("multiplayer effects (regression)", () => {
     expect(typeof fx.expiresAt).toBe("number");
     const wordB = fx.payload?.wordsByPlayerId?.[bId];
     expect(typeof wordB).toBe("string");
-    expect(wordB.length).toBe(7);
+    expect(wordB.length).toBe(DECOY_WORD.length);
     expect(/^[a-z]+$/.test(wordB)).toBe(true);
 
     await vi.advanceTimersByTimeAsync(12_000);

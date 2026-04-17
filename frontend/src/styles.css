@@ -154,6 +154,30 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
   animation: flow-hud-invite 1.85s ease-in-out infinite;
 }
 
+.word-container.word-container--flow-ready {
+  animation: flow-hud-invite 1.85s ease-in-out infinite;
+}
+
+.flow-hud-mount {
+  width: 100%;
+  max-width: min(800px, calc(100% - 24px));
+  margin: 18px auto 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+#flow-hud-mount .flow-hud-wrap {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  width: 100%;
+  max-width: min(640px, 100%);
+}
+
 .flow-hud-wrap--high:not(.flow-hud-wrap--active) #flow-gauge-bar {
   animation: flow-gauge-breathe 2.5s ease-in-out infinite;
 }

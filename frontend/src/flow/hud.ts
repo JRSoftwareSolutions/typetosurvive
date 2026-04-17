@@ -1,6 +1,6 @@
 import { state } from "../state";
 
-const HUD_DOM_VERSION = "2";
+const HUD_DOM_VERSION = "3";
 
 export function ensureFlowHud() {
   const existing = document.getElementById("flow-hud");
@@ -11,14 +11,19 @@ export function ensureFlowHud() {
   wrap.id = "flow-hud";
   wrap.dataset.flowHudVersion = HUD_DOM_VERSION;
   wrap.className = "flow-hud-wrap";
-  wrap.style.position = "fixed";
-  wrap.style.left = "50%";
-  wrap.style.bottom = "22px";
-  wrap.style.transform = "translateX(-50%)";
-  wrap.style.zIndex = "55";
+  const mount = document.getElementById("flow-hud-mount");
+  if (!mount) {
+    wrap.style.position = "fixed";
+    wrap.style.left = "50%";
+    wrap.style.bottom = "22px";
+    wrap.style.transform = "translateX(-50%)";
+    wrap.style.width = "min(640px, calc(100vw - 40px))";
+    wrap.style.zIndex = "55";
+  } else {
+    wrap.style.zIndex = "auto";
+  }
   wrap.style.pointerEvents = "none";
   wrap.style.display = "none";
-  wrap.style.width = "min(640px, calc(100vw - 40px))";
 
   const row = document.createElement("div");
   row.id = "flow-hud-row";
@@ -41,6 +46,8 @@ export function ensureFlowHud() {
   topRow.style.justifyContent = "space-between";
   topRow.style.gap = "12px";
   topRow.style.width = "100%";
+  /* Reserve space for % + counter stack so showing #flow-counter does not grow the HUD (flex-centered main would jump). */
+  topRow.style.minHeight = "34px";
 
   const title = document.createElement("div");
   title.textContent = "FLOW";
@@ -112,7 +119,7 @@ export function ensureFlowHud() {
   row.appendChild(barOuter);
   row.appendChild(hint);
   wrap.appendChild(row);
-  document.body.appendChild(wrap);
+  (mount ?? document.body).appendChild(wrap);
   return wrap;
 }
 
@@ -158,5 +165,11 @@ export function updateFlowHud(opts: { max: number; activateAt: number }) {
     } else {
       (counter as HTMLElement).style.display = "none";
     }
+  }
+
+  const wordBox = document.getElementById("word-container");
+  if (wordBox) {
+    const showWordGlow = Boolean(state.gameRunning && canActivate);
+    wordBox.classList.toggle("word-container--flow-ready", showWordGlow);
   }
 }

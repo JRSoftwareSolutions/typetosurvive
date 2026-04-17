@@ -1,4 +1,6 @@
 import { updatePlayer } from "../api";
+import { playFlowEndCue } from "./flowAudio";
+import { clearForesightPreview } from "./foresight";
 import { state } from "../state";
 
 export function endFlow(
@@ -10,6 +12,8 @@ export function endFlow(
   state.flowEndsAt = 0;
 
   const payout = Math.max(0, Math.trunc(Number(state.flowCounter) || 0));
+  clearForesightPreview({ animate: true });
+  playFlowEndCue();
   updateUI();
 
   if (state.roomCode && state.myPlayerId) {
@@ -66,7 +70,6 @@ export function applyFlowInputDelta(
       state.flowCounter = (Number(state.flowCounter) || 0) + 1;
       continue;
     }
-    state.flowCounter = (Number(state.flowCounter) || 0) - 1;
     state.flowLastInputValue = next;
     updateUI();
     endFlow(updateUI, { now });
@@ -76,4 +79,3 @@ export function applyFlowInputDelta(
   state.flowLastInputValue = next;
   updateUI();
 }
-

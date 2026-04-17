@@ -1,18 +1,73 @@
-export type FlowGaugeAddArgs = {
-  streak: number;
-  softCap: number;
-  baseAdd: number;
-  multAdd: number;
+import {
+  FLOW_DURATION_MAX_MS,
+  FLOW_DURATION_MIN_MS,
+  FLOW_ELASTIC_DT_REFERENCE_MS,
+  FLOW_ELASTIC_PULL_MULT,
+  FLOW_ELASTIC_PULL_POW,
+  FLOW_GAUGE_ACTIVATE_AT,
+  FLOW_GAUGE_FILL_BASE,
+  FLOW_GAUGE_FILL_DIMINISH_POW,
+  FLOW_GAUGE_MAX,
+} from "./constants";
+import { lerp } from "./utils/math";
+
+export type FlowGaugeFillOpts = {
+  maxGauge?: number;
+  baseFill?: number;
+  diminishPow?: number;
 };
 
-export function flowGaugeAddForStreak({
-  streak,
-  softCap,
-  baseAdd,
-  multAdd,
-}: FlowGaugeAddArgs) {
-  const s = Math.max(1, Math.min(softCap, Math.trunc(Number(streak) || 1)));
-  return baseAdd + s * multAdd;
+/** Add gauge after a word completed with no typos on that word (diminishing as gauge rises). */
+export function flowGaugeFillOnPerfectWord(
+  currentGauge: number,
+  opts: FlowGaugeFillOpts = {},
+): number {
+  const max = opts.maxGauge ?? FLOW_GAUGE_MAX;
+  const baseFill = opts.baseFill ?? FLOW_GAUGE_FILL_BASE;
+  const diminishPow = opts.diminishPow ?? FLOW_GAUGE_FILL_DIMINISH_POW;
+  const g = Math.max(0, Math.min(max, Number(currentGauge) || 0));
+  const diminishing = Math.pow(g / max, diminishPow);
+  return Math.min(max, g + baseFill * (1 - diminishing));
+}
+
+export type FlowGaugeElasticOpts = {
+  maxGauge?: number;
+  mult?: number;
+  pow?: number;
+  dtReferenceMs?: number;
+};
+
+/** Elastic drift toward zero over time (stronger pull at higher gauge). */
+export function flowGaugeElasticStep(
+  currentGauge: number,
+  dtMs: number,
+  opts: FlowGaugeElasticOpts = {},
+): number {
+  const max = opts.maxGauge ?? FLOW_GAUGE_MAX;
+  const mult = opts.mult ?? FLOW_ELASTIC_PULL_MULT;
+  const pow = opts.pow ?? FLOW_ELASTIC_PULL_POW;
+  const ref = opts.dtReferenceMs ?? FLOW_ELASTIC_DT_REFERENCE_MS;
+  const g = Math.max(0, Math.min(max, Number(currentGauge) || 0));
+  if (g <= 0) return 0;
+  const scale = Math.max(0, Number(dtMs) || 0) / ref;
+  const pullBack = mult * Math.pow(g / max, pow) * scale;
+  return Math.max(0, g - pullBack);
+}
+
+/** Duration (ms) when activating Flow from `gauge` (0..max), only meaningful from activate threshold upward. */
+export function flowDurationMsAtActivation(
+  gaugeAtActivation: number,
+  opts: { maxGauge?: number; minMs?: number; maxMs?: number; activateAt?: number } = {},
+): number {
+  const max = opts.maxGauge ?? FLOW_GAUGE_MAX;
+  const minMs = opts.minMs ?? FLOW_DURATION_MIN_MS;
+  const maxMs = opts.maxMs ?? FLOW_DURATION_MAX_MS;
+  const activateAt = opts.activateAt ?? FLOW_GAUGE_ACTIVATE_AT;
+  const g = Math.max(0, Math.min(max, Number(gaugeAtActivation) || 0));
+  const low = max * activateAt;
+  if (g < low) return minMs;
+  const t = Math.min(1, Math.max(0, (g - low) / (max - low)));
+  return Math.floor(lerp(minMs, maxMs, t));
 }
 
 export type EffectDto = {
@@ -39,4 +94,3 @@ export function deriveActiveEffects({ effects, myPlayerId, now }: DeriveActiveEf
     return false;
   });
 }
-

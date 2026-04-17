@@ -1,6 +1,7 @@
 import { leaveRoom, updatePlayer } from "../api";
-import { FLOW_GAUGE_MAX } from "../constants";
+import { FLOW_GAUGE_MAX, FLOW_HEALTH_MULT_WHILE_ACTIVE } from "../constants";
 import { els } from "../dom/els";
+import { flowGaugeFillOnPerfectWord } from "../gameLogic";
 import { state } from "../state";
 import { getWords } from "./selectors";
 import { createBonusPopup, renderLeaderboardHtml, renderWord, updateUI } from "../ui/render";
@@ -17,13 +18,13 @@ export function startMultiplayerGame() {
   state.score = 0;
   state.currentWord = getWords()[0] || "survive";
   state.flowGauge = 0;
-  state.flowStreakPerfectWords = 0;
   state.flowWordHadTypo = false;
   state.flowActive = false;
   state.flowEndsAt = 0;
   state.flowCounter = 0;
   state.flowLastInputValue = "";
   state.flowLastCharEffectAt = 0;
+  state.lastFlowGaugeSentAt = 0;
   els.lobbyScreen.classList.remove("show");
   els.gameOverScreen.classList.remove("show");
   if (els.endScreenTitle) {
@@ -90,16 +91,9 @@ export function endVictory() {
   els.gameOverScreen.classList.add("show");
 }
 
-export function success(flowGaugeAddForStreak: (streak: number) => number) {
-  if (!state.flowActive) {
-    if (!state.flowWordHadTypo) {
-      state.flowStreakPerfectWords = Math.max(0, (Number(state.flowStreakPerfectWords) || 0) + 1);
-      const add = flowGaugeAddForStreak(state.flowStreakPerfectWords);
-      state.flowGauge = Math.min(FLOW_GAUGE_MAX, (Number(state.flowGauge) || 0) + add);
-    } else {
-      state.flowStreakPerfectWords = 0;
-      state.flowGauge = 0;
-    }
+export function success() {
+  if (!state.flowActive && !state.flowWordHadTypo) {
+    state.flowGauge = flowGaugeFillOnPerfectWord(state.flowGauge);
   }
   state.flowWordHadTypo = false;
 
@@ -107,6 +101,7 @@ export function success(flowGaugeAddForStreak: (streak: number) => number) {
   let bonus = 15 + len * 7;
   if (len >= 10) bonus += 28;
   if (len >= 13) bonus += 22;
+  if (state.flowActive) bonus = Math.floor(bonus * FLOW_HEALTH_MULT_WHILE_ACTIVE);
 
   state.health = Math.min(100, state.health + bonus);
   state.score += len * 18 + 50;
@@ -140,4 +135,3 @@ export async function leaveRoomAndReload(removeAllDevBots: (opts: { leaveServer:
     location.reload();
   }
 }
-

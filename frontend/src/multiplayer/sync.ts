@@ -39,8 +39,8 @@ export function syncRoom(nextRoom: any) {
   updateFlowObscureVfx();
 
   const banner = ensureEffectBanner();
-  // Show JAMMED as soon as the effect targets this client (even if it applies to the next word).
-  banner.style.display = active.some((e: any) => e?.type === "decoyWord") ? "block" : "none";
+  const jammedActive = active.some((e: any) => e?.type === "decoyWord");
+  banner.style.display = jammedActive && !state.flowActive ? "block" : "none";
 
   if (typingTargetWord() !== prevTypingTarget) renderWord();
 

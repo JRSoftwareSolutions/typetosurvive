@@ -1,6 +1,7 @@
 import { state } from "../state";
 import { els } from "../dom/els";
 import { typingTargetWord } from "../effects/decoy";
+import { updateForesightPreview } from "../flow/foresight";
 import { maybeEndFlowIfExpired } from "../flow/flow";
 import { updateFlowHud } from "../flow/hud";
 import { FLOW_GAUGE_ACTIVATE_AT, FLOW_GAUGE_MAX } from "../constants";
@@ -15,6 +16,7 @@ export function renderWord() {
     span.textContent = char;
     els.letters.appendChild(span);
   }
+  updateForesightPreview();
 }
 
 export function renderPlayerList() {
@@ -68,6 +70,7 @@ export function updateUI() {
   els.threat.textContent = String(threat).padStart(2, "0");
 
   updateFlowHud({ max: FLOW_GAUGE_MAX, activateAt: FLOW_GAUGE_ACTIVATE_AT });
+  updateForesightPreview();
 }
 
 export function flashPlayer(playerId: string, className: string, timeoutMs: number) {

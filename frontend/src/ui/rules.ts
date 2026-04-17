@@ -27,7 +27,7 @@ const MECHANIC_CARDS: RuleCard[] = [
   {
     id: "flowState",
     title: "FLOW STATE",
-    subtitle: "Focus mode, bonus, and interference",
+    subtitle: "Elastic gauge, Foresight, and interference",
     implemented: true,
   },
 ];
@@ -148,13 +148,19 @@ function rulesDetailHtml(panelId: string): string {
         <div class="rules-section">
           <div class="rules-h">FLOW STATE</div>
           <div class="rules-p">
-            When you finish words <em>without a typo on that word</em>, your Flow gauge fills. A typo on a word clears the gauge and resets that streak.
+            When you <em>complete</em> a word with <em>no typos on that word</em>, your Flow gauge gains a chunk of fill. The higher the gauge already is, the less each clean word adds (diminishing returns). The gauge also slowly drifts back toward empty over time—stronger pull the fuller it is (elastic decay). Decay pauses while Flow is active.
           </div>
           <div class="rules-p">
-            When the gauge is at least half full, press <span class="rules-k">Enter</span> to enter Flow. You stay in Flow for several seconds (longer if the gauge was fuller—about 8 to 12 seconds).
+            A typo <em>outside</em> Flow drops your gauge by about <span class="rules-k">35%</span> (it hurts, but it is not a full wipe).
           </div>
           <div class="rules-p">
-            During Flow, only correct keystrokes toward the current word add to a bonus counter. A wrong keystroke cuts the bonus down and can end Flow early.
+            When the gauge is at least half full, press <span class="rules-k">Enter</span> to enter Flow. How long Flow lasts scales smoothly with how full the gauge was at activation: about <span class="rules-k">6.5–7 seconds</span> at half, up to about <span class="rules-k">14 seconds</span> at full. Activating spends the charge (the gauge resets for the next build-up).
+          </div>
+          <div class="rules-p">
+            <span class="rules-k">Foresight:</span> during Flow you see a soft preview of the <em>next</em> word above your current target, and you are fully immune to ${rulesLink("jammed", "Jammed")} for what you must type (you still type the real word). Healing from each word you finish during Flow is reduced by about <span class="rules-k">18%</span>.
+          </div>
+          <div class="rules-p">
+            Only correct keystrokes toward the current word add to the Flow bonus counter (used when Flow ends). A wrong keystroke during Flow ends Flow immediately and sends interference based on that counter—lost time is the main punishment (no extra gauge penalty on top).
           </div>
         </div>
         <div class="rules-section rules-subsection" id="rules-flow-interference">
@@ -192,7 +198,7 @@ function rulesDetailHtml(panelId: string): string {
             If an opponent finishes <span class="rules-k">three words within about five seconds</span>, other players can get Jammed (there is a cooldown so it cannot spam constantly). The effect lasts a bit over ten seconds.
           </div>
           <div class="rules-p">
-            While Jammed, after you finish the word you were already on, your <em>next</em> typing target becomes a fake word until you complete it. You will see the on-screen <span class="rules-k">JAMMED!</span> banner when it applies to you.
+            While Jammed, after you finish the word you were already on, your <em>next</em> typing target becomes a fake word until you complete it. You will see the on-screen <span class="rules-k">JAMMED!</span> banner when it applies to you. While ${rulesLink("flowState", "Flow")} is active, Foresight blocks Jammed from changing your typing target (and the banner hides for clarity).
           </div>
           <div class="rules-p">
             See also: ${rulesLink("threatLevel", "Threat level")}, ${rulesLink("flowState", "Flow")}.

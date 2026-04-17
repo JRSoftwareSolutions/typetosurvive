@@ -63,10 +63,10 @@ export type State = {
   rulesNavStack: string[];
   rulesIndexScrollTop: number;
   lastHealthUpdateAt: number;
+  lastFlowGaugeSentAt: number;
   lastRenderAt: number;
 
   flowGauge: number;
-  flowStreakPerfectWords: number;
   flowWordHadTypo: boolean;
   flowActive: boolean;
   flowEndsAt: number;
@@ -101,11 +101,11 @@ export const state: State = {
   rulesNavStack: ["index"],
   rulesIndexScrollTop: 0,
   lastHealthUpdateAt: 0,
+  lastFlowGaugeSentAt: 0,
   lastRenderAt: 0,
 
   // Flow state (new mechanic)
   flowGauge: 0,
-  flowStreakPerfectWords: 0,
   flowWordHadTypo: false,
   flowActive: false,
   flowEndsAt: 0,

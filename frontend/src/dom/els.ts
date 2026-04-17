@@ -1,4 +1,5 @@
 export const els = {
+  foresightWord: document.getElementById("foresight-word") as HTMLElement | null,
   letters: document.getElementById("letters") as HTMLElement,
   input: document.getElementById("typing-input") as HTMLInputElement,
   healthBar: document.getElementById("health-bar") as HTMLElement,

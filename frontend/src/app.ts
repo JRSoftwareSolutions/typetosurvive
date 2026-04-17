@@ -1,13 +1,8 @@
 import { createRoom, joinRoom, startRoom, subscribeRoomEvents, updatePlayer } from "./api";
-import {
-  FLOW_GAUGE_ADD_BASE,
-  FLOW_GAUGE_ADD_MULT,
-  FLOW_STREAK_SOFT_CAP,
-} from "./constants";
+import { FLOW_GAUGE_MAX, FLOW_TYPO_GAUGE_MULT } from "./constants";
 import { els } from "./dom/els";
 import { bindEvents } from "./events/bindEvents";
 import { getActiveDecoyForMe, typingTargetWord } from "./effects/decoy";
-import { flowGaugeAddForStreak as flowGaugeAddForStreakImpl } from "./gameLogic";
 import { leaveRoomAndReload } from "./game/game";
 import { state } from "./state";
 import { syncRoom } from "./multiplayer/sync";
@@ -21,15 +16,6 @@ import {
   updateDevBotPanel,
 } from "./dev/devBots";
 import { closeRules, openRules } from "./ui/rules";
-
-function flowGaugeAddForStreak(streak: number) {
-  return flowGaugeAddForStreakImpl({
-    streak,
-    softCap: FLOW_STREAK_SOFT_CAP,
-    baseAdd: FLOW_GAUGE_ADD_BASE,
-    multAdd: FLOW_GAUGE_ADD_MULT,
-  });
-}
 
 function showLobby() {
   state.devBotsEnabled = isDevBotsEnabled();
@@ -105,9 +91,16 @@ function updateLetterColors(typed: string) {
   });
 
   if (hasTypo && !state.flowWordHadTypo) {
-    state.flowWordHadTypo = true;
-    state.flowGauge = 0;
-    state.flowStreakPerfectWords = 0;
+    if (!state.flowActive) {
+      state.flowWordHadTypo = true;
+      state.flowGauge = Math.max(
+        0,
+        Math.min(FLOW_GAUGE_MAX, (Number(state.flowGauge) || 0) * FLOW_TYPO_GAUGE_MULT),
+      );
+      if (state.roomCode && state.myPlayerId) {
+        updatePlayer(state.roomCode, state.myPlayerId, { flowGauge: state.flowGauge }).catch(() => {});
+      }
+    }
   }
 
   if (hasTypo && state.roomCode && state.myPlayerId) {
@@ -141,11 +134,10 @@ bindEvents({
   closeRules,
   onDecoySuccess,
   updateLetterColors,
-  flowGaugeAddForStreak,
   isDevBotsEnabled,
   updateDevBotPanel,
   ensureDevBotPanel,
-  addDevBot: () => addDevBot({ flowGaugeAddForStreak }),
+  addDevBot: () => addDevBot(),
   removeAllDevBots,
   stopDevBot,
 });
@@ -160,4 +152,3 @@ if (versionEl) {
 if (import.meta.env.DEV) {
   (window as any).__T4YL_STATE__ = state;
 }
-

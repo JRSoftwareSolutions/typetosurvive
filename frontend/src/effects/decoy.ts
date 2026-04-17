@@ -28,7 +28,10 @@ export function getDecoyTypingState() {
     state.decoyDeferEffectId = decoy.effectId;
     state.decoyDeferIndex = state.myCurrentIndex;
   }
-  const useDecoyWord = state.decoyDeferIndex != null && state.myCurrentIndex > state.decoyDeferIndex;
+  const useDecoyWord =
+    state.decoyDeferIndex != null &&
+    state.myCurrentIndex > state.decoyDeferIndex &&
+    !state.flowActive;
   return { decoy, useDecoyWord };
 }
 

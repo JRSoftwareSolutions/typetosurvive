@@ -5,17 +5,11 @@ import {
   DEV_BOT_WORD_PAUSE_MS,
   FLOW_GAUGE_ACTIVATE_AT,
   FLOW_GAUGE_MAX,
-  FLOW_MAX_MS,
-  FLOW_MIN_MS,
 } from "../constants";
 import { els } from "../dom/els";
+import { flowDurationMsAtActivation, flowGaugeFillOnPerfectWord } from "../gameLogic";
 import { state } from "../state";
 import { syncRoom } from "../multiplayer/sync";
-import { lerp } from "../utils/math";
-
-export type DevBotsApi = {
-  flowGaugeAddForStreak: (streak: number) => number;
-};
 
 const devBotTimersById = new Map<string, number>();
 const devBotFlowById = new Map<string, any>();
@@ -129,7 +123,6 @@ function getDevBotFlow(botId: string) {
   if (existing) return existing;
   const init = {
     gauge: 0,
-    streak: 0,
     active: false,
     endsAt: 0,
     counter: 0,
@@ -159,23 +152,22 @@ async function maybeActivateDevBotFlow(botId: string, flow: any) {
   if (flow.active) return;
   const gauge = Math.max(0, Math.min(FLOW_GAUGE_MAX, Number(flow.gauge) || 0));
   if (gauge < FLOW_GAUGE_MAX * FLOW_GAUGE_ACTIVATE_AT) return;
-  const durationMs = Math.floor(lerp(FLOW_MIN_MS, FLOW_MAX_MS, gauge / FLOW_GAUGE_MAX));
+  const durationMs = flowDurationMsAtActivation(gauge);
   flow.active = true;
   flow.endsAt = Date.now() + durationMs;
   flow.counter = 0;
   flow.gauge = 0;
-  flow.streak = 0;
   if (state.roomCode) {
     await updatePlayer(state.roomCode, botId, { flowActive: true, flowGauge: 0 }).catch(() => {});
   }
 }
 
-function scheduleDevBotStep(botId: string, api: DevBotsApi) {
+function scheduleDevBotStep(botId: string) {
   stopDevBotTimer(botId);
 
   if (!state.roomCode) return;
   if (!(state.room as any)?.started) {
-    devBotTimersById.set(botId, window.setTimeout(() => scheduleDevBotStep(botId, api), 250));
+    devBotTimersById.set(botId, window.setTimeout(() => scheduleDevBotStep(botId), 250));
     return;
   }
   const bot: any = (state.room as any)?.players?.[botId];
@@ -191,7 +183,7 @@ function scheduleDevBotStep(botId: string, api: DevBotsApi) {
   const delay = Math.max(30, word.length * DEV_BOT_CHAR_MS + DEV_BOT_WORD_PAUSE_MS + jitter);
 
   const handle = window.setTimeout(async () => {
-    if (!state.roomCode || !(state.room as any)?.started) return scheduleDevBotStep(botId, api);
+    if (!state.roomCode || !(state.room as any)?.started) return scheduleDevBotStep(botId);
     const b: any = (state.room as any)?.players?.[botId];
     if (!b) return;
 
@@ -206,9 +198,7 @@ function scheduleDevBotStep(botId: string, api: DevBotsApi) {
     if (flow.active) {
       flow.counter = (Number(flow.counter) || 0) + targetWord.length;
     } else {
-      flow.streak = Math.max(0, (Number(flow.streak) || 0) + 1);
-      const add = api.flowGaugeAddForStreak(flow.streak);
-      flow.gauge = Math.min(FLOW_GAUGE_MAX, (Number(flow.gauge) || 0) + add);
+      flow.gauge = flowGaugeFillOnPerfectWord(Number(flow.gauge) || 0);
     }
     try {
       await updatePlayer(state.roomCode, botId, {
@@ -224,13 +214,13 @@ function scheduleDevBotStep(botId: string, api: DevBotsApi) {
     }
 
     await maybeEndDevBotFlow(botId, flow);
-    scheduleDevBotStep(botId, api);
+    scheduleDevBotStep(botId);
   }, delay);
 
   devBotTimersById.set(botId, handle);
 }
 
-export async function addDevBot(api: DevBotsApi) {
+export async function addDevBot() {
   if (!state.devBotsEnabled) return;
   if (!state.roomCode) return;
   const n = (Array.isArray(state.devBotIds) ? state.devBotIds.length : 0) + 1;
@@ -242,9 +232,8 @@ export async function addDevBot(api: DevBotsApi) {
     if (!state.devBotIds.includes(botId)) state.devBotIds.push(botId);
     syncRoom(response.room);
     updateDevBotPanel();
-    scheduleDevBotStep(botId, api);
+    scheduleDevBotStep(botId);
   } catch (error: any) {
     alert(`Add bot failed: ${error.message}`);
   }
 }
-

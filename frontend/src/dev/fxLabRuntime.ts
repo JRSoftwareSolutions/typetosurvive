@@ -40,7 +40,8 @@ function refreshFxVisuals() {
   }) as any;
 
   const banner = ensureEffectBanner();
-  banner.style.display = state.activeEffects.some((e: any) => e?.type === "decoyWord") ? "block" : "none";
+  const jammed = state.activeEffects.some((e: any) => e?.type === "decoyWord");
+  banner.style.display = jammed && !state.flowActive ? "block" : "none";
 
   updateFlowObscureVfx();
   renderWord();

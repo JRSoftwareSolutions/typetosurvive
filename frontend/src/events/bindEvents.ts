@@ -1,20 +1,16 @@
 import { updatePlayer } from "../api";
 import { previewFlowInterferenceFromRules } from "../flow/obscureVfx";
-import {
-  FLOW_GAUGE_ACTIVATE_AT,
-  FLOW_GAUGE_MAX,
-  FLOW_MAX_MS,
-  FLOW_MIN_MS,
-} from "../constants";
+import { playFlowStartCue } from "../flow/flowAudio";
+import { FLOW_GAUGE_ACTIVATE_AT, FLOW_GAUGE_MAX } from "../constants";
 import { els } from "../dom/els";
 import { isDecoyTypingActive, typingTargetWord } from "../effects/decoy";
 import { applyFlowInputDelta } from "../flow/flow";
+import { flowDurationMsAtActivation } from "../gameLogic";
 import { endGame, success } from "../game/game";
 import { state } from "../state";
 import { updateUI } from "../ui/render";
 import { rulesNavigateHome, rulesNavigatePop, rulesNavigatePush } from "../ui/rules";
 import { updateLeaveRoomVisibility } from "../ui/visibility";
-import { lerp } from "../utils/math";
 
 export type BindEventsOpts = {
   createRoomHandler: () => void;
@@ -25,7 +21,6 @@ export type BindEventsOpts = {
   closeRules: (opts?: { restoreFocus?: boolean }) => void;
   onDecoySuccess: () => void | Promise<void>;
   updateLetterColors: (typed: string) => void;
-  flowGaugeAddForStreak: (streak: number) => number;
 
   // Dev-bot wiring (optional; only used when enabled)
   isDevBotsEnabled: () => boolean;
@@ -104,7 +99,7 @@ export function bindEvents(opts: BindEventsOpts) {
     applyFlowInputDelta(updateUI, typed, target);
     if (typed.toLowerCase() === target.toLowerCase()) {
       if (isDecoyTypingActive()) void opts.onDecoySuccess();
-      else success(opts.flowGaugeAddForStreak);
+      else success();
     }
   });
 
@@ -114,8 +109,8 @@ export function bindEvents(opts: BindEventsOpts) {
       if (els.rulesScreen?.classList.contains("show")) return;
       if (document.activeElement !== els.input) return;
 
-      const gauge = Math.max(0, Math.min(FLOW_GAUGE_MAX, Number(state.flowGauge) || 0));
-      const canActivate = !state.flowActive && gauge >= FLOW_GAUGE_MAX * FLOW_GAUGE_ACTIVATE_AT;
+      const gaugeAt = Math.max(0, Math.min(FLOW_GAUGE_MAX, Number(state.flowGauge) || 0));
+      const canActivate = !state.flowActive && gaugeAt >= FLOW_GAUGE_MAX * FLOW_GAUGE_ACTIVATE_AT;
       if (!canActivate) return;
 
       e.preventDefault();
@@ -123,12 +118,12 @@ export function bindEvents(opts: BindEventsOpts) {
       state.flowCounter = 0;
       state.flowLastInputValue = String(els.input.value || "");
       state.flowLastCharEffectAt = 0;
-      const durationMs = Math.floor(lerp(FLOW_MIN_MS, FLOW_MAX_MS, gauge / FLOW_GAUGE_MAX));
+      const durationMs = flowDurationMsAtActivation(gaugeAt);
       state.flowEndsAt = Date.now() + durationMs;
       state.flowGauge = 0;
-      state.flowStreakPerfectWords = 0;
       state.flowWordHadTypo = false;
 
+      playFlowStartCue();
       updateUI();
 
       if (state.roomCode && state.myPlayerId) {
@@ -153,4 +148,3 @@ export function bindEvents(opts: BindEventsOpts) {
 
   updateLeaveRoomVisibility();
 }
-

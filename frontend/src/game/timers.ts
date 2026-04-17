@@ -1,4 +1,5 @@
 import { updatePlayer } from "../api";
+import { flowGaugeElasticStep } from "../gameLogic";
 import { state } from "../state";
 
 let lastDrainTickAt = 0;
@@ -30,6 +31,21 @@ export function drainHealth(updateUI: () => void, endGame: () => void) {
     updateUI();
     endGame();
     return;
+  }
+
+  // Elastic Flow gauge drift (paused while Flow is active so duration matches activation snapshot).
+  if (!state.flowActive) {
+    const prevGauge = Number(state.flowGauge) || 0;
+    state.flowGauge = flowGaugeElasticStep(prevGauge, dt);
+    if (
+      state.roomCode &&
+      state.myPlayerId &&
+      now - state.lastFlowGaugeSentAt > 350 &&
+      state.flowGauge !== prevGauge
+    ) {
+      updatePlayer(state.roomCode, state.myPlayerId, { flowGauge: state.flowGauge }).catch(() => {});
+      state.lastFlowGaugeSentAt = now;
+    }
   }
 
   if (now - state.lastHealthUpdateAt > 350 && state.roomCode && state.myPlayerId) {

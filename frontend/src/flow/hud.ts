@@ -6,6 +6,7 @@ export function ensureFlowHud() {
 
   const wrap = document.createElement("div");
   wrap.id = "flow-hud";
+  wrap.className = "flow-hud-wrap";
   wrap.style.position = "fixed";
   wrap.style.left = "50%";
   wrap.style.bottom = "22px";
@@ -16,6 +17,8 @@ export function ensureFlowHud() {
   wrap.style.width = "min(640px, calc(100vw - 40px))";
 
   const row = document.createElement("div");
+  row.id = "flow-hud-row";
+  row.className = "flow-hud-row";
   row.style.display = "flex";
   row.style.alignItems = "center";
   row.style.justifyContent = "space-between";
@@ -49,6 +52,7 @@ export function ensureFlowHud() {
   left.appendChild(hint);
 
   const barOuter = document.createElement("div");
+  barOuter.id = "flow-gauge-outer";
   barOuter.style.flex = "1";
   barOuter.style.height = "16px";
   barOuter.style.background = "rgba(17,17,17,0.9)";
@@ -98,10 +102,17 @@ export function ensureFlowHud() {
 }
 
 export function updateFlowHud(opts: { max: number; activateAt: number }) {
-  const hud = ensureFlowHud();
+  const hud = ensureFlowHud() as HTMLElement;
   const gauge = Math.max(0, Math.min(opts.max, Number(state.flowGauge) || 0));
   const pct = Math.round((gauge / opts.max) * 100);
   hud.style.display = state.gameRunning ? "block" : "none";
+
+  const canActivate = !state.flowActive && gauge >= opts.max * opts.activateAt;
+  const high = !state.flowActive && pct >= 70;
+
+  hud.classList.toggle("flow-hud-wrap--active", state.flowActive);
+  hud.classList.toggle("flow-hud-wrap--ready", canActivate);
+  hud.classList.toggle("flow-hud-wrap--high", high);
 
   const bar = document.getElementById("flow-gauge-bar");
   if (bar) (bar as HTMLElement).style.width = `${pct}%`;
@@ -111,8 +122,11 @@ export function updateFlowHud(opts: { max: number; activateAt: number }) {
 
   const hint = document.getElementById("flow-hint");
   if (hint) {
-    const canActivate = !state.flowActive && gauge >= opts.max * opts.activateAt;
-    hint.textContent = state.flowActive ? "ACTIVE" : canActivate ? "PRESS ENTER" : "BUILD (PERFECT WORDS)";
+    hint.textContent = state.flowActive
+      ? "FORESIGHT · JAMMED IMMUNE"
+      : canActivate
+        ? "PRESS ENTER"
+        : "ELASTIC GAUGE · CLEAN WORDS FILL";
     (hint as HTMLElement).style.color = canActivate ? "#fff" : "rgba(255,255,255,0.9)";
     (hint as HTMLElement).style.textShadow = canActivate ? "0 0 12px rgba(255,255,255,0.35)" : "none";
   }
@@ -131,4 +145,3 @@ export function updateFlowHud(opts: { max: number; activateAt: number }) {
     }
   }
 }
-

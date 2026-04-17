@@ -1,11 +1,69 @@
 const rooms = new Map();
 const roomSubscribers = new Map();
 const roomTickers = new Map();
+/** @type {Map<string, number>} key: `${roomCode}|${playerId}` */
+const playerSseRefCounts = new Map();
+/** @type {WeakMap<import("http").ServerResponse, { roomCode: string, playerId: string }>} */
+const sseRefsByRes = new WeakMap();
 
 import { DECOY_WORD } from "../constants.js";
 
 const FLOW_OBSCURE_TICK_MS = 350;
 const FLOW_OBSCURE_MAX_TICKS = 80;
+
+/** Rooms with no SSE listeners and no writes for this long are removed (API-only / crashed clients). */
+const STALE_ROOM_MS = 5 * 60 * 1000;
+const JANITOR_INTERVAL_MS = 60 * 1000;
+
+function sseKey(roomCode, playerId) {
+  return `${roomCode}|${playerId}`;
+}
+
+function touchRoomActivity(room) {
+  if (room) room.lastActivityAt = Date.now();
+}
+
+function purgeRoomMaps(roomCode) {
+  roomSubscribers.delete(roomCode);
+  for (const key of [...playerSseRefCounts.keys()]) {
+    if (key.startsWith(`${roomCode}|`)) playerSseRefCounts.delete(key);
+  }
+}
+
+function sweepStaleRooms() {
+  const now = Date.now();
+  for (const [roomCode, room] of [...rooms.entries()]) {
+    const listeners = roomSubscribers.get(roomCode);
+    if (listeners?.length) continue;
+    const last =
+      typeof room.lastActivityAt === "number"
+        ? room.lastActivityAt
+        : typeof room.createdAt === "number"
+          ? room.createdAt
+          : now;
+    if (now - last < STALE_ROOM_MS) continue;
+    stopRoomTicker(roomCode);
+    rooms.delete(roomCode);
+    emitRoomUpdate(roomCode);
+    purgeRoomMaps(roomCode);
+  }
+}
+
+/**
+ * Removes abandoned rooms periodically. Call once from the HTTP server process.
+ * @param {{ intervalMs?: number }} [options]
+ * @returns {() => void} stop function
+ */
+export function startRoomMaintenanceLoop(options = {}) {
+  const intervalMs = typeof options.intervalMs === "number" ? options.intervalMs : JANITOR_INTERVAL_MS;
+  const id = setInterval(() => sweepStaleRooms(), intervalMs);
+  return () => clearInterval(id);
+}
+
+/** @internal Used by tests */
+export function sweepStaleRoomsNow() {
+  sweepStaleRooms();
+}
 
 function randomId(prefix = "p") {
   return `${prefix}_${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -172,21 +230,51 @@ function tickRoom(roomCode) {
   emitRoomUpdate(roomCode);
 }
 
-export function subscribeRoom(roomCode, res) {
+/**
+ * @param {string} roomCode
+ * @param {import("http").ServerResponse} res
+ * @param {string | null} [ssePlayerId] when present and matches a player in the room, closing this SSE decrements a ref-count and may remove the player (last tab wins).
+ */
+export function subscribeRoom(roomCode, res, ssePlayerId = null) {
   if (!roomSubscribers.has(roomCode)) {
     roomSubscribers.set(roomCode, []);
   }
   roomSubscribers.get(roomCode).push(res);
+
+  const room = rooms.get(roomCode);
+  if (ssePlayerId && room?.players?.[ssePlayerId]) {
+    const k = sseKey(roomCode, ssePlayerId);
+    playerSseRefCounts.set(k, (playerSseRefCounts.get(k) ?? 0) + 1);
+    sseRefsByRes.set(res, { roomCode, playerId: ssePlayerId });
+  }
+
   emitRoomUpdate(roomCode);
 }
 
 export function unsubscribeRoom(roomCode, res) {
   const listeners = roomSubscribers.get(roomCode);
   if (!listeners) return;
-  roomSubscribers.set(
-    roomCode,
-    listeners.filter((listener) => listener !== res),
-  );
+
+  const next = listeners.filter((listener) => listener !== res);
+  if (next.length === 0) {
+    roomSubscribers.delete(roomCode);
+  } else {
+    roomSubscribers.set(roomCode, next);
+  }
+
+  const tracked = sseRefsByRes.get(res);
+  sseRefsByRes.delete(res);
+
+  if (tracked && tracked.roomCode === roomCode) {
+    const k = sseKey(roomCode, tracked.playerId);
+    const n = (playerSseRefCounts.get(k) ?? 1) - 1;
+    if (n <= 0) {
+      playerSseRefCounts.delete(k);
+      leaveRoom({ roomCode, playerId: tracked.playerId });
+    } else {
+      playerSseRefCounts.set(k, n);
+    }
+  }
 }
 
 export function getRoom(roomCode) {
@@ -203,6 +291,7 @@ export function createRoom({ username, wordSequence }) {
     roomCode,
     started: false,
     createdAt: now,
+    lastActivityAt: now,
     creatorId: playerId,
     wordSequence,
     startedAt: null,
@@ -277,6 +366,7 @@ export function joinRoom({ roomCode, username, playerId }) {
     lastSeenAt: now,
   };
 
+  touchRoomActivity(room);
   emitRoomUpdate(roomCode);
   return { room, playerId: resolvedPlayerId };
 }
@@ -289,6 +379,7 @@ export function startRoom({ roomCode, playerId }) {
   room.lastTickAt = Date.now();
   room.matchEnded = false;
   room.matchWinnerId = null;
+  touchRoomActivity(room);
   emitRoomUpdate(roomCode);
   ensureRoomTicker(roomCode);
   return true;
@@ -297,6 +388,7 @@ export function startRoom({ roomCode, playerId }) {
 export function updatePlayer({ roomCode, playerId, patch }) {
   const room = rooms.get(roomCode);
   if (!room?.players?.[playerId]) return null;
+  touchRoomActivity(room);
   const prev = room.players[playerId];
 
   if (typeof patch?.decoyTypedEffectId === "string") {
@@ -431,6 +523,7 @@ export function leaveRoom({ roomCode, playerId }) {
     stopRoomTicker(roomCode);
     rooms.delete(roomCode);
     emitRoomUpdate(roomCode);
+    purgeRoomMaps(roomCode);
     return true;
   }
 
@@ -438,6 +531,7 @@ export function leaveRoom({ roomCode, playerId }) {
     room.creatorId = Object.keys(room.players)[0];
   }
 
+  touchRoomActivity(room);
   emitRoomUpdate(roomCode);
   return true;
 }

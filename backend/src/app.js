@@ -76,10 +76,11 @@ export function createApp() {
 
   app.get("/api/rooms/:roomCode/events", (req, res) => {
     const roomCode = req.params.roomCode.toUpperCase();
+    const ssePlayerId = typeof req.query.playerId === "string" ? req.query.playerId : null;
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
-    subscribeRoom(roomCode, res);
+    subscribeRoom(roomCode, res, ssePlayerId);
 
     req.on("close", () => {
       unsubscribeRoom(roomCode, res);

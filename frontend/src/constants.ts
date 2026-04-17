@@ -5,6 +5,10 @@ export const FLOW_GAUGE_ACTIVATE_AT = 0.5;
 export const FLOW_GAUGE_FILL_BASE = 15;
 /** Exponent on (gauge/max) for diminishing returns on fill. */
 export const FLOW_GAUGE_FILL_DIMINISH_POW = 1.78;
+/** Word length at which gauge fill multiplier is 1.0 (shorter → less, longer → more). */
+export const FLOW_GAUGE_LENGTH_REF_CHARS = 7;
+export const FLOW_GAUGE_LENGTH_MULT_MIN = 0.55;
+export const FLOW_GAUGE_LENGTH_MULT_MAX = 1.45;
 
 /** Elastic pullback: subtract `mult * (gauge/max)^pow * (dtMs / elasticDtReferenceMs)` per drain tick. */
 export const FLOW_ELASTIC_PULL_MULT = 0.6;

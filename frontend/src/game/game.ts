@@ -94,7 +94,9 @@ export function endVictory() {
 
 export function success() {
   if (!state.flowActive && !state.flowWordHadTypo) {
-    state.flowGauge = flowGaugeFillOnPerfectWord(state.flowGauge);
+    state.flowGauge = flowGaugeFillOnPerfectWord(state.flowGauge, {
+      wordLength: state.currentWord.length,
+    });
   }
   state.flowWordHadTypo = false;
 

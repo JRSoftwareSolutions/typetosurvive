@@ -22,6 +22,21 @@ describe("gameLogic", () => {
     expect(high - 90).toBeLessThan(mid - 45);
   });
 
+  it("flowGaugeFillOnPerfectWord scales fill by word length", () => {
+    const baseOpts = {
+      maxGauge: 100,
+      baseFill: 20,
+      diminishPow: 1.7,
+      lengthRefChars: 10,
+      lengthMultMin: 0.5,
+      lengthMultMax: 2,
+    };
+    const atRef = flowGaugeFillOnPerfectWord(0, { ...baseOpts, wordLength: 10 });
+    const doubleLen = flowGaugeFillOnPerfectWord(0, { ...baseOpts, wordLength: 20 });
+    expect(doubleLen).toBeGreaterThan(atRef);
+    expect(doubleLen - 0).toBeCloseTo((atRef - 0) * 2, 5);
+  });
+
   it("flowGaugeElasticStep pulls down more at higher gauge and scales with dt", () => {
     const g50 = flowGaugeElasticStep(50, 85, {});
     const g50half = flowGaugeElasticStep(50, 42.5, {});

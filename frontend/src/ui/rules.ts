@@ -148,7 +148,7 @@ function rulesDetailHtml(panelId: string): string {
         <div class="rules-section">
           <div class="rules-h">FLOW STATE</div>
           <div class="rules-p">
-            When you <em>complete</em> a word with <em>no typos on that word</em>, your Flow gauge gains a chunk of fill. The higher the gauge already is, the less each clean word adds (diminishing returns). The gauge also slowly drifts back toward empty over time—stronger pull the fuller it is (elastic decay). Decay pauses while Flow is active.
+            When you <em>complete</em> a word with <em>no typos on that word</em>, your Flow gauge gains fill—<em>longer words add more</em>, shorter words add less (on top of the usual curve). The higher the gauge already is, the less each clean word adds (diminishing returns). The gauge also slowly drifts back toward empty over time—stronger pull the fuller it is (elastic decay). Decay pauses while Flow is active.
           </div>
           <div class="rules-p">
             A typo <em>outside</em> Flow drops your gauge by about <span class="rules-k">35%</span> (it hurts, but it is not a full wipe).

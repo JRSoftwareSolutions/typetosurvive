@@ -36,7 +36,7 @@ async function createRoomHandler() {
     syncRoom(response.room);
 
     if (state.eventSource) state.eventSource.close();
-    state.eventSource = subscribeRoomEvents(state.roomCode, syncRoom);
+    state.eventSource = subscribeRoomEvents(state.roomCode, syncRoom, state.myPlayerId);
     showLobby();
   } catch (error: any) {
     alert(`Create room failed: ${error.message}`);
@@ -58,7 +58,7 @@ async function joinRoomHandler() {
     syncRoom(response.room);
 
     if (state.eventSource) state.eventSource.close();
-    state.eventSource = subscribeRoomEvents(state.roomCode, syncRoom);
+    state.eventSource = subscribeRoomEvents(state.roomCode, syncRoom, state.myPlayerId);
     showLobby();
   } catch (error: any) {
     alert(`Join room failed: ${error.message}`);

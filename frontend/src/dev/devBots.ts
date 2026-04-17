@@ -198,7 +198,9 @@ function scheduleDevBotStep(botId: string) {
     if (flow.active) {
       flow.counter = (Number(flow.counter) || 0) + targetWord.length;
     } else {
-      flow.gauge = flowGaugeFillOnPerfectWord(Number(flow.gauge) || 0);
+      flow.gauge = flowGaugeFillOnPerfectWord(Number(flow.gauge) || 0, {
+        wordLength: targetWord.length,
+      });
     }
     try {
       await updatePlayer(state.roomCode, botId, {

@@ -66,8 +66,13 @@ export function leaveRoom(roomCode: string, playerId: string) {
   });
 }
 
-export function subscribeRoomEvents(roomCode: string, onMessage: (data: unknown) => void) {
-  const es = new EventSource(`${API_BASE_URL}/rooms/${roomCode}/events`);
+export function subscribeRoomEvents(
+  roomCode: string,
+  onMessage: (data: unknown) => void,
+  playerId?: string,
+) {
+  const q = playerId ? `?playerId=${encodeURIComponent(playerId)}` : "";
+  const es = new EventSource(`${API_BASE_URL}/rooms/${roomCode}/events${q}`);
   es.onmessage = (event) => {
     const data = JSON.parse(event.data);
     onMessage(data);

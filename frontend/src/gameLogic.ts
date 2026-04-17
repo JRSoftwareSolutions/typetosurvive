@@ -7,6 +7,9 @@ import {
   FLOW_GAUGE_ACTIVATE_AT,
   FLOW_GAUGE_FILL_BASE,
   FLOW_GAUGE_FILL_DIMINISH_POW,
+  FLOW_GAUGE_LENGTH_MULT_MAX,
+  FLOW_GAUGE_LENGTH_MULT_MIN,
+  FLOW_GAUGE_LENGTH_REF_CHARS,
   FLOW_GAUGE_MAX,
 } from "./constants";
 import { lerp } from "./utils/math";
@@ -15,6 +18,11 @@ export type FlowGaugeFillOpts = {
   maxGauge?: number;
   baseFill?: number;
   diminishPow?: number;
+  /** Completed word length; longer words add more gauge. Defaults to ref length (multiplier 1). */
+  wordLength?: number;
+  lengthRefChars?: number;
+  lengthMultMin?: number;
+  lengthMultMax?: number;
 };
 
 /** Add gauge after a word completed with no typos on that word (diminishing as gauge rises). */
@@ -25,9 +33,18 @@ export function flowGaugeFillOnPerfectWord(
   const max = opts.maxGauge ?? FLOW_GAUGE_MAX;
   const baseFill = opts.baseFill ?? FLOW_GAUGE_FILL_BASE;
   const diminishPow = opts.diminishPow ?? FLOW_GAUGE_FILL_DIMINISH_POW;
+  const refChars = opts.lengthRefChars ?? FLOW_GAUGE_LENGTH_REF_CHARS;
+  const multMin = opts.lengthMultMin ?? FLOW_GAUGE_LENGTH_MULT_MIN;
+  const multMax = opts.lengthMultMax ?? FLOW_GAUGE_LENGTH_MULT_MAX;
   const g = Math.max(0, Math.min(max, Number(currentGauge) || 0));
   const diminishing = Math.pow(g / max, diminishPow);
-  return Math.min(max, g + baseFill * (1 - diminishing));
+  const wlRaw =
+    opts.wordLength != null && Number.isFinite(Number(opts.wordLength))
+      ? Number(opts.wordLength)
+      : refChars;
+  const safeLen = Math.max(1, wlRaw);
+  const lengthMult = Math.min(multMax, Math.max(multMin, safeLen / refChars));
+  return Math.min(max, g + baseFill * (1 - diminishing) * lengthMult);
 }
 
 export type FlowGaugeElasticOpts = {

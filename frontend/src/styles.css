@@ -272,6 +272,31 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
 .rules-subsection {
   scroll-margin-top: 8px;
 }
+.rules-preview-fx-btn {
+  margin-top: 4px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.65rem;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  color: var(--neon-cyan);
+  background: rgba(0, 247, 255, 0.08);
+  border: 3px solid rgba(0, 247, 255, 0.55);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(0, 247, 255, 0.2);
+  text-shadow: 0 0 8px rgba(0, 247, 255, 0.45);
+  -webkit-tap-highlight-color: transparent;
+}
+.rules-preview-fx-btn:hover {
+  background: rgba(0, 247, 255, 0.16);
+  border-color: var(--neon-cyan);
+  color: #fff;
+}
+.rules-preview-fx-btn:focus-visible {
+  outline: 2px solid rgba(255, 0, 170, 0.85);
+  outline-offset: 3px;
+}
 .rules-grid {
   display: grid;
   gap: 14px;

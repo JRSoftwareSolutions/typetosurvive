@@ -163,6 +163,11 @@ function rulesDetailHtml(panelId: string): string {
             When Flow ends, that bonus is sent to the server. Another player—usually whoever has the score closest to yours—gets brief screen interference (glitch-style visuals). How intense it is depends on how strong your Flow finish was.
           </div>
           <div class="rules-p">
+            <button type="button" class="rules-preview-fx-btn" data-rules-preview-flow-interference="1" data-testid="rules-preview-flow-interference">
+              Flash sample interference
+            </button>
+          </div>
+          <div class="rules-p">
             Related: ${rulesLink("threatLevel", "Threat level")}, ${rulesLink("score", "Score")}, ${rulesLink("jammed", "Jammed")}.
           </div>
         </div>

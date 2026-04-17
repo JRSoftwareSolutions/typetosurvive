@@ -1,5 +1,75 @@
 import { state } from "../state";
 
+const FLOW_OBSCURE_LAYER_Z = "75";
+
+let flowInterferencePreviewUntil = 0;
+let flowInterferencePreviewInterval: number | null = null;
+let flowInterferencePreviewZRestore: string | null = null;
+
+function stopFlowInterferencePreview() {
+  flowInterferencePreviewUntil = 0;
+  if (flowInterferencePreviewInterval != null) {
+    window.clearInterval(flowInterferencePreviewInterval);
+    flowInterferencePreviewInterval = null;
+  }
+  const layer = document.getElementById("flow-obscure-layer");
+  if (layer && flowInterferencePreviewZRestore != null) {
+    layer.style.zIndex = flowInterferencePreviewZRestore;
+    flowInterferencePreviewZRestore = null;
+  }
+}
+
+function tickFlowObscureSpawns(layer: HTMLElement, remainingTicks: number, intensity: number) {
+  const existingCount = layer.childElementCount;
+  const maxParticles = 90;
+  if (existingCount >= maxParticles) return;
+
+  const base = 4 + Math.floor(intensity * 8);
+  const burst = remainingTicks > 40 ? 4 : remainingTicks > 15 ? 2 : 1;
+  const count = Math.max(4, Math.min(14, base + burst));
+  for (let i = 0; i < count; i += 1) spawnFlowObscureGlitch(layer, intensity);
+
+  const doSweep = Math.random() < 0.28 + intensity * 0.35;
+  if (doSweep) spawnFlowObscureSweep(layer, intensity);
+}
+
+/** Short full-screen sample of Flow interference (for Rules UI). No-ops if a real effect is already active. */
+export function previewFlowInterferenceFromRules() {
+  if (activeFlowObscureForMe()) return;
+
+  stopFlowInterferencePreview();
+
+  const durationMs = 1750;
+  const tickMs = 160;
+  const intensity = 0.62;
+  const remainingTicks = 55;
+
+  const layer = ensureFlowObscureLayer();
+  flowInterferencePreviewZRestore = layer.style.zIndex || FLOW_OBSCURE_LAYER_Z;
+  layer.style.zIndex = "110";
+
+  flowInterferencePreviewUntil = Date.now() + durationMs;
+
+  const runTick = () => {
+    if (activeFlowObscureForMe()) {
+      stopFlowInterferencePreview();
+      updateFlowObscureVfx();
+      return;
+    }
+    if (Date.now() >= flowInterferencePreviewUntil) {
+      stopFlowInterferencePreview();
+      updateFlowObscureVfx();
+      return;
+    }
+    layer.style.display = "block";
+    document.body.classList.add("flow-obscured");
+    tickFlowObscureSpawns(layer, remainingTicks, intensity);
+  };
+
+  runTick();
+  flowInterferencePreviewInterval = window.setInterval(runTick, tickMs);
+}
+
 export function ensureFlowObscureLayer() {
   const existing = document.getElementById("flow-obscure-layer");
   if (existing) return existing;
@@ -10,7 +80,7 @@ export function ensureFlowObscureLayer() {
   layer.style.inset = "0";
   layer.style.pointerEvents = "none";
   // Foreground over gameplay; still under menus (overlay uses z-index:100).
-  layer.style.zIndex = "75";
+  layer.style.zIndex = FLOW_OBSCURE_LAYER_Z;
   layer.style.display = "none";
   document.body.appendChild(layer);
   return layer;
@@ -69,29 +139,23 @@ export function spawnFlowObscureSweep(layer: HTMLElement, intensity: number) {
 export function updateFlowObscureVfx() {
   const layer = ensureFlowObscureLayer();
   const effect: any = activeFlowObscureForMe();
-  if (!effect) {
+  const previewOn = Date.now() < flowInterferencePreviewUntil;
+
+  if (!effect && !previewOn) {
     layer.style.display = "none";
     document.body.classList.remove("flow-obscured");
     return;
   }
-  layer.style.display = "block";
-  document.body.classList.add("flow-obscured");
 
-  const payload = effect.payload && typeof effect.payload === "object" ? effect.payload : {};
-  const remainingTicks = typeof payload.remainingTicks === "number" ? payload.remainingTicks : 0;
-  const intensity = Math.max(0, Math.min(1, typeof payload.intensity === "number" ? payload.intensity : 0.25));
+  if (effect) {
+    layer.style.display = "block";
+    document.body.classList.add("flow-obscured");
 
-  const existingCount = layer.childElementCount;
-  const maxParticles = 90;
-  if (existingCount >= maxParticles) return;
+    const payload = effect.payload && typeof effect.payload === "object" ? effect.payload : {};
+    const remainingTicks = typeof payload.remainingTicks === "number" ? payload.remainingTicks : 0;
+    const intensity = Math.max(0, Math.min(1, typeof payload.intensity === "number" ? payload.intensity : 0.25));
 
-  const base = 4 + Math.floor(intensity * 8);
-  const burst = remainingTicks > 40 ? 4 : remainingTicks > 15 ? 2 : 1;
-  const count = Math.max(4, Math.min(14, base + burst));
-  for (let i = 0; i < count; i += 1) spawnFlowObscureGlitch(layer, intensity);
-
-  // Occasional sweep line that cuts across the typing area.
-  const doSweep = Math.random() < 0.28 + intensity * 0.35;
-  if (doSweep) spawnFlowObscureSweep(layer, intensity);
+    tickFlowObscureSpawns(layer, remainingTicks, intensity);
+  }
 }
 

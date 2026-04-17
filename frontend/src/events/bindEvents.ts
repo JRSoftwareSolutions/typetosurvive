@@ -1,4 +1,5 @@
 import { updatePlayer } from "../api";
+import { previewFlowInterferenceFromRules } from "../flow/obscureVfx";
 import {
   FLOW_GAUGE_ACTIVATE_AT,
   FLOW_GAUGE_MAX,
@@ -76,6 +77,10 @@ export function bindEvents(opts: BindEventsOpts) {
   els.rulesContent?.addEventListener("click", (e) => {
     const target = e.target instanceof Element ? e.target : null;
     if (!target) return;
+    if (target.closest("[data-rules-preview-flow-interference]")) {
+      previewFlowInterferenceFromRules();
+      return;
+    }
     const link = target.closest("[data-rules-link]");
     if (link) {
       const id = link.getAttribute("data-rules-link");

@@ -1,4 +1,5 @@
 import { updatePlayer } from "../api";
+import { renderWord } from "../ui/render";
 import { playFlowEndCue } from "./flowAudio";
 import { clearForesightPreview } from "./foresight";
 import { state } from "../state";
@@ -15,6 +16,9 @@ export function endFlow(
   clearForesightPreview({ animate: true });
   playFlowEndCue();
   updateUI();
+  // Flow hid jammed typing (`decoy.ts`); once flow ends, `typingTargetWord()` may switch to the decoy
+  // immediately. `updateUI()` does not repaint letters — refresh so the word strip matches input logic.
+  renderWord();
 
   if (state.roomCode && state.myPlayerId) {
     updatePlayer(state.roomCode, state.myPlayerId, {

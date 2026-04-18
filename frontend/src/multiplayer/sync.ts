@@ -2,7 +2,14 @@ import { deriveActiveEffects } from "../gameLogic";
 import { ensureEffectBanner, ensureSecondWindBanner } from "../effects/banners";
 import { typingTargetWord } from "../effects/decoy";
 import { updateFlowObscureVfx } from "../flow/obscureVfx";
-import { endGame, endVictory, startMultiplayerGame } from "../game/game";
+import {
+  endGame,
+  endVictory,
+  enterMultiplayerPlayShell,
+  startMultiplayerGame,
+  startMultiplayerGameplayLoops,
+} from "../game/game";
+import { beginMultiplayerStartCountdown, cancelMultiplayerStartCountdown } from "./startCountdown";
 import { getMyPlayer } from "../game/selectors";
 import { state } from "../state";
 import { flashPlayer, renderPlayerList, renderWord } from "../ui/render";
@@ -66,8 +73,28 @@ export function syncRoom(nextRoom: any) {
     if (next.lastSuccess && next.lastSuccess !== prev.lastSuccess) flashPlayer(playerId, "correct-flash", 1000);
   });
 
-  if ((state.room as any)?.started && !prevStarted && !state.gameRunning) {
-    startMultiplayerGame();
+  const nextStarted = Boolean((nextRoom as any)?.started);
+  const playBeginsAtRaw = (nextRoom as any)?.playBeginsAt;
+  const playBeginsAt = typeof playBeginsAtRaw === "number" ? playBeginsAtRaw : null;
+  const countdownLive = playBeginsAt != null && Date.now() < playBeginsAt;
+
+  if (nextStarted && !state.gameRunning && !prevStarted) {
+    if (countdownLive) {
+      enterMultiplayerPlayShell();
+      beginMultiplayerStartCountdown(playBeginsAt, () => {
+        startMultiplayerGameplayLoops();
+      });
+    } else {
+      startMultiplayerGame();
+    }
+  }
+
+  if (state.gameRunning && !state.playInputAllowed && nextStarted) {
+    const pba = (nextRoom as any)?.playBeginsAt;
+    if (typeof pba !== "number" || Date.now() >= pba) {
+      cancelMultiplayerStartCountdown();
+      startMultiplayerGameplayLoops();
+    }
   }
 
   updateLeaveRoomVisibility();

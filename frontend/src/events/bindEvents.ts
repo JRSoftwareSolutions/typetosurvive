@@ -94,7 +94,7 @@ export function bindEvents(opts: BindEventsOpts) {
   });
 
   els.input.addEventListener("input", (e) => {
-    if (!state.gameRunning) return;
+    if (!state.gameRunning || !state.playInputAllowed) return;
     const typed = (e.target as HTMLInputElement).value.trim();
     opts.updateLetterColors(typed);
     const target = typingTargetWord();
@@ -107,7 +107,7 @@ export function bindEvents(opts: BindEventsOpts) {
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
-      if (!state.gameRunning) return;
+      if (!state.gameRunning || !state.playInputAllowed) return;
       if (els.rulesScreen?.classList.contains("show")) return;
       if (document.activeElement !== els.input) return;
 

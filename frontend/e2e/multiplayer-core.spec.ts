@@ -41,9 +41,13 @@ test("create room, join, start, and register a success", async ({ browser, baseU
   // Start game (A is creator).
   await a.getByTestId("start-game-btn").click();
 
-  // Both should be in game (typing input visible).
-  await expect(a.getByTestId("typing-input")).toBeVisible();
-  await expect(b.getByTestId("typing-input")).toBeVisible();
+  // Pre-start countdown (~5.9s) then typing goes live for both clients.
+  const inputA = a.getByTestId("typing-input");
+  const inputB = b.getByTestId("typing-input");
+  await expect(inputA).toBeVisible();
+  await expect(inputB).toBeVisible();
+  await expect(inputA).toBeEditable({ timeout: 12_000 });
+  await expect(inputB).toBeEditable({ timeout: 12_000 });
 
   // A completes one word and UI advances.
   const beforeWord = await readWord(a);

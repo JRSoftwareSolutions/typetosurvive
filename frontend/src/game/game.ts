@@ -3,15 +3,18 @@ import { FLOW_GAUGE_MAX, FLOW_HEALTH_MULT_WHILE_ACTIVE } from "../constants";
 import { els } from "../dom/els";
 import { triggerFlowWordSlotAnimation } from "../flow/foresight";
 import { flowGaugeFillOnPerfectWord } from "../gameLogic";
+import { cancelMultiplayerStartCountdown } from "../multiplayer/startCountdown";
 import { state } from "../state";
 import { getWords } from "./selectors";
 import { createBonusPopup, renderLeaderboardHtml, renderWord, updateUI } from "../ui/render";
 import { startDrain, startTimer, stopGameLoops } from "./timers";
 
-export function startMultiplayerGame() {
+export function enterMultiplayerPlayShell() {
   if (state.gameRunning) return;
 
   state.gameRunning = true;
+  state.playInputAllowed = false;
+  els.input.readOnly = true;
   document.body.classList.add("in-game");
   state.myCurrentIndex = 0;
   state.decoyDeferEffectId = null;
@@ -33,16 +36,36 @@ export function startMultiplayerGame() {
     els.endScreenTitle.className = "title danger-title";
   }
   els.input.value = "";
-  els.input.focus();
   renderWord();
   updateUI();
+}
+
+export function startMultiplayerGameplayLoops() {
+  if (state.drainInterval != null) {
+    state.playInputAllowed = true;
+    els.input.readOnly = false;
+    return;
+  }
+
+  state.playInputAllowed = true;
+  els.input.readOnly = false;
   startTimer(updateUI);
   startDrain(updateUI, endGame);
+  els.input.focus();
+}
+
+export function startMultiplayerGame() {
+  if (state.gameRunning) return;
+  enterMultiplayerPlayShell();
+  startMultiplayerGameplayLoops();
 }
 
 export function endGame() {
   if (!state.gameRunning) return;
+  cancelMultiplayerStartCountdown();
   state.gameRunning = false;
+  state.playInputAllowed = true;
+  els.input.readOnly = false;
   stopGameLoops();
   document.body.classList.remove("in-game");
   els.input.blur();
@@ -66,7 +89,10 @@ export function endGame() {
 
 export function endVictory() {
   if (!state.gameRunning) return;
+  cancelMultiplayerStartCountdown();
   state.gameRunning = false;
+  state.playInputAllowed = true;
+  els.input.readOnly = false;
   stopGameLoops();
   document.body.classList.remove("in-game");
   els.input.blur();

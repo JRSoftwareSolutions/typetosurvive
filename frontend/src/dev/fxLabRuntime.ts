@@ -111,6 +111,7 @@ export function bootFxLab() {
   state.myPlayerId = ME;
   state.myUsername = "You";
   state.gameRunning = true;
+  state.playInputAllowed = true;
   state.currentWord = "SURVIVE";
   state.myCurrentIndex = 0;
   state.health = 100;

@@ -166,7 +166,13 @@ function scheduleDevBotStep(botId: string) {
   stopDevBotTimer(botId);
 
   if (!state.roomCode) return;
-  if (!(state.room as any)?.started) {
+  const roomAny = state.room as any;
+  if (!roomAny?.started) {
+    devBotTimersById.set(botId, window.setTimeout(() => scheduleDevBotStep(botId), 250));
+    return;
+  }
+  const pba = roomAny?.playBeginsAt;
+  if (typeof pba === "number" && Date.now() < pba) {
     devBotTimersById.set(botId, window.setTimeout(() => scheduleDevBotStep(botId), 250));
     return;
   }
@@ -183,8 +189,11 @@ function scheduleDevBotStep(botId: string) {
   const delay = Math.max(30, word.length * DEV_BOT_CHAR_MS + DEV_BOT_WORD_PAUSE_MS + jitter);
 
   const handle = window.setTimeout(async () => {
-    if (!state.roomCode || !(state.room as any)?.started) return scheduleDevBotStep(botId);
-    const b: any = (state.room as any)?.players?.[botId];
+    const roomLive = state.room as any;
+    if (!state.roomCode || !roomLive?.started) return scheduleDevBotStep(botId);
+    const pb = roomLive?.playBeginsAt;
+    if (typeof pb === "number" && Date.now() < pb) return scheduleDevBotStep(botId);
+    const b: any = roomLive?.players?.[botId];
     if (!b) return;
 
     await maybeEndDevBotFlow(botId, flow);

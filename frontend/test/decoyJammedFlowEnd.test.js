@@ -30,6 +30,7 @@ describe("Jammed (decoy) when Flow ends", () => {
     state.roomCode = "";
     state.myPlayerId = me;
     state.gameRunning = true;
+    state.playInputAllowed = true;
     state.myCurrentIndex = 1;
     state.currentWord = "plane";
     state.flowActive = true;

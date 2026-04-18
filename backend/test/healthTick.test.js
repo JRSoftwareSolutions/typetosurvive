@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/app.js";
+import { MULTIPLAYER_COUNTDOWN_TOTAL_MS } from "../src/services/roomService.js";
 
 describe("server-authoritative health ticking", () => {
   beforeEach(() => {
@@ -22,8 +23,9 @@ describe("server-authoritative health ticking", () => {
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
     expect(startRes.status).toBe(200);
 
-    // Advance 1 second; ticker runs every 250ms using Date.now().
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(MULTIPLAYER_COUNTDOWN_TOTAL_MS);
+    // Advance >1s of match time (250ms ticks) so elapsedSeconds reliably increments.
+    await vi.advanceTimersByTimeAsync(1250);
 
     const roomRes = await request(app).get(`/api/rooms/${roomCode}`);
     expect(roomRes.status).toBe(200);
@@ -69,6 +71,8 @@ describe("server-authoritative health ticking", () => {
     await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: creatorId, ready: true });
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
     expect(startRes.status).toBe(200);
+
+    await vi.advanceTimersByTimeAsync(MULTIPLAYER_COUNTDOWN_TOTAL_MS);
 
     // Arm: drop below 20% while tick loop is active.
     const lowRes = await request(app)

@@ -11,6 +11,12 @@ import { DECOY_WORD } from "../constants.js";
 const FLOW_OBSCURE_TICK_MS = 350;
 const FLOW_OBSCURE_MAX_TICKS = 80;
 
+/** Pre-match countdown (must match client `startCountdown.ts`). */
+export const MULTIPLAYER_START_DIGIT_MS = 1000;
+export const MULTIPLAYER_START_HOLD_MS = 900;
+export const MULTIPLAYER_COUNTDOWN_TOTAL_MS =
+  5 * MULTIPLAYER_START_DIGIT_MS + MULTIPLAYER_START_HOLD_MS;
+
 /** Rooms with no SSE listeners and no writes for this long are removed (API-only / crashed clients). */
 const STALE_ROOM_MS = 5 * 60 * 1000;
 const JANITOR_INTERVAL_MS = 60 * 1000;
@@ -170,13 +176,26 @@ function tickRoom(roomCode) {
   if (!room || !room.started) return;
 
   const now = Date.now();
+
+  if (typeof room.playBeginsAt === "number") {
+    if (now < room.playBeginsAt) {
+      room.lastTickAt = now;
+      room.startedAt = room.startedAt ?? room.playBeginsAt;
+      room.elapsedSeconds = 0;
+      return;
+    }
+    delete room.playBeginsAt;
+    room.startedAt = now;
+    room.lastTickAt = now;
+  }
+
   const startedAt = room.startedAt ?? now;
   const lastTickAt = room.lastTickAt ?? now;
   const dtMs = Math.max(0, now - lastTickAt);
 
   room.startedAt = startedAt;
   room.lastTickAt = now;
-  room.elapsedSeconds = Math.floor((now - startedAt) / 1000);
+  room.elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000));
 
   Object.keys(room.players).forEach((playerId) => {
     const p = room.players[playerId];
@@ -391,9 +410,11 @@ export function startRoom({ roomCode, playerId }) {
     delete room.players[id].ready;
   });
 
+  const now = Date.now();
   room.started = true;
-  room.startedAt = room.startedAt ?? Date.now();
-  room.lastTickAt = Date.now();
+  room.playBeginsAt = now + MULTIPLAYER_COUNTDOWN_TOTAL_MS;
+  room.startedAt = room.playBeginsAt;
+  room.lastTickAt = now;
   room.matchEnded = false;
   room.matchWinnerId = null;
   touchRoomActivity(room);

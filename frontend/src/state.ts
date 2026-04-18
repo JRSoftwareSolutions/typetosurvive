@@ -22,6 +22,8 @@ export type PlayerDto = {
 
 export type RoomDto = {
   started?: boolean;
+  /** Server wall time when match simulation and typing go live (pre-play countdown). */
+  playBeginsAt?: number;
   startedAt?: number;
   elapsedSeconds?: number;
   matchEnded?: boolean;
@@ -50,6 +52,8 @@ export type State = {
   myPlayerId: string | null;
   myUsername: string;
   gameRunning: boolean;
+  /** False during pre-start countdown while the play shell is visible. */
+  playInputAllowed: boolean;
   myCurrentIndex: number;
   currentWord: string;
   activeEffects: EffectDto[];
@@ -89,6 +93,7 @@ export const state: State = {
   myPlayerId: null,
   myUsername: "",
   gameRunning: false,
+  playInputAllowed: true,
   myCurrentIndex: 0,
   currentWord: "",
   activeEffects: [],

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/app.js";
 import { DECOY_WORD } from "../src/constants.js";
+import { MULTIPLAYER_COUNTDOWN_TOTAL_MS } from "../src/services/roomService.js";
 
 describe("multiplayer effects (regression)", () => {
   beforeEach(() => {
@@ -110,6 +111,8 @@ describe("multiplayer effects (regression)", () => {
     await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: cId, ready: true });
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
     expect(startRes.status).toBe(200);
+
+    await vi.advanceTimersByTimeAsync(MULTIPLAYER_COUNTDOWN_TOTAL_MS);
 
     // Set scores so B is closest to A.
     await request(app).patch(`/api/rooms/${roomCode}/players/${aId}`).send({ score: 500 });

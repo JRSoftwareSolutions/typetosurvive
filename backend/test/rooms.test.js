@@ -69,6 +69,20 @@ describe("rooms API (regression)", () => {
     await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: bobId, ready: true });
     const ok = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
     expect(ok.status).toBe(200);
+
+    const roomRes = await request(app).get(`/api/rooms/${roomCode}`);
+    expect(roomRes.status).toBe(200);
+    const room = roomRes.body.room;
+    expect(typeof room.playBeginsAt).toBe("number");
+    expect(room.playBeginsAt).toBeGreaterThan(Date.now());
+    expect(room.playBeginsAt).toBeLessThan(Date.now() + 20_000);
+    expect(room.startedAt).toBe(room.playBeginsAt);
+    const aHealth = room.players[creatorId].health;
+    expect(aHealth).toBe(100);
+
+    await new Promise((r) => setTimeout(r, 400));
+    const roomRes2 = await request(app).get(`/api/rooms/${roomCode}`);
+    expect(roomRes2.body.room.players[creatorId].health).toBe(100);
   });
 
   it("allows rename-in-place when rejoining with playerId", async () => {

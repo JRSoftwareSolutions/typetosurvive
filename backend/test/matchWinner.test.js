@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/app.js";
+import { MULTIPLAYER_COUNTDOWN_TOTAL_MS } from "../src/services/roomService.js";
 
 describe("last-player-standing match end", () => {
   beforeEach(() => {
@@ -25,6 +26,8 @@ describe("last-player-standing match end", () => {
     await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: aId, ready: true });
     await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: bId, ready: true });
     await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
+
+    await vi.advanceTimersByTimeAsync(MULTIPLAYER_COUNTDOWN_TOTAL_MS);
 
     await request(app).patch(`/api/rooms/${roomCode}/players/${aId}`).send({ health: 0.01 });
 

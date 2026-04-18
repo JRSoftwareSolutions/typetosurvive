@@ -441,6 +441,350 @@ main { flex: 1; width: 100%; max-width: 1000px; display: flex; flex-direction: c
   outline: 2px solid rgba(255, 0, 170, 0.85);
   outline-offset: 3px;
 }
+
+/* Foresight rules card: mini replica of in-game preview + word row */
+.rules-foresight-demo {
+  margin-top: 18px;
+  padding: 14px 14px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(0, 247, 255, 0.35);
+  background: rgba(0, 0, 0, 0.5);
+}
+.rules-foresight-demo-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  color: rgba(255, 0, 170, 0.92);
+  text-shadow: 0 0 10px rgba(255, 0, 170, 0.45);
+  margin-bottom: 8px;
+  text-align: center;
+}
+.rules-foresight-demo-next.foresight-word {
+  max-width: none;
+  width: 100%;
+  margin: 0 auto 10px;
+  font-size: clamp(0.62rem, 2.4vw, 0.8rem);
+  min-height: 1.35em;
+}
+.rules-foresight-demo-wordbox {
+  border: 4px solid var(--neon-cyan);
+  border-radius: 10px;
+  padding: 12px 10px 14px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 18px rgba(0, 247, 255, 0.22);
+}
+.rules-foresight-demo-note {
+  display: block;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  opacity: 0.72;
+  color: rgba(0, 247, 255, 0.9);
+  margin-bottom: 6px;
+}
+.rules-foresight-demo-current {
+  font-size: clamp(0.88rem, 2.8vw, 1.15rem);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 14px rgba(0, 247, 255, 0.5);
+}
+.rules-foresight-demo-caption {
+  margin-top: 10px;
+  font-size: 0.58rem;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  opacity: 0.78;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Flow rules card: static HUD replicas (class-based; do not use #flow-gauge-bar ids) */
+.rules-flow-gauge-demos {
+  margin-top: 18px;
+  padding: 14px 12px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(0, 247, 255, 0.3);
+  background: rgba(0, 0, 0, 0.45);
+}
+.rules-flow-gauge-demo-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 0, 170, 0.9);
+  text-shadow: 0 0 10px rgba(255, 0, 170, 0.4);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.rules-flow-gauge-demo-row + .rules-flow-gauge-demo-row {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 247, 255, 0.2);
+}
+.rules-flow-gauge-demo-caption {
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  opacity: 0.82;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.88);
+}
+.rules-flow-demo-wrap {
+  display: flex;
+  justify-content: center;
+}
+.rules-flow-hud-row {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 3px solid rgba(0, 247, 255, 0.7);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.78);
+  box-shadow: 0 0 18px rgba(0, 247, 255, 0.25);
+}
+.rules-flow-hud-top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 28px;
+}
+.rules-flow-hud-title {
+  color: #00f7ff;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  text-shadow: 0 0 10px rgba(0, 247, 255, 0.25);
+  flex-shrink: 0;
+}
+.rules-flow-hud-pct {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #ff00aa;
+  text-shadow: 0 0 12px rgba(255, 0, 170, 0.35);
+}
+.rules-flow-gauge-outer {
+  width: 100%;
+  height: 16px;
+  background: rgba(17, 17, 17, 0.9);
+  border: 3px solid rgba(255, 0, 170, 0.65);
+  border-radius: 10px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.rules-flow-gauge-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(255, 0, 170, 0.85), rgba(0, 247, 255, 0.9));
+  box-shadow: 0 0 18px rgba(255, 0, 170, 0.35);
+  transition: width 0.18s ease;
+}
+.rules-flow-hint {
+  font-size: 9px;
+  opacity: 0.85;
+  letter-spacing: 0.06em;
+  text-align: center;
+  width: 100%;
+  line-height: 1.35;
+  word-break: break-word;
+  color: rgba(255, 255, 255, 0.9);
+}
+.rules-flow-hint--ready {
+  color: #fff;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+}
+.rules-flow-demo-wrap--ready .rules-flow-hud-row {
+  animation: flow-hud-invite 1.85s ease-in-out infinite;
+}
+.rules-flow-demo-wrap--high:not(.rules-flow-demo-wrap--active) .rules-flow-gauge-bar {
+  animation: flow-gauge-breathe 2.5s ease-in-out infinite;
+}
+
+/* Jammed rules card: banner + decoy word row (mirrors #effect-banner + word box letters) */
+.rules-jammed-demo {
+  margin-top: 18px;
+  padding: 14px 14px 16px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 0, 170, 0.35);
+  background: rgba(0, 0, 0, 0.48);
+  text-align: center;
+}
+.rules-jammed-demo-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 0, 170, 0.92);
+  text-shadow: 0 0 10px rgba(255, 0, 170, 0.4);
+  margin-bottom: 12px;
+}
+.rules-jammed-demo-banner {
+  display: inline-block;
+  margin: 0 auto 12px;
+  padding: 10px 18px;
+  border: 3px solid var(--neon-pink);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ff00aa;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px #ff00aa;
+}
+.rules-jammed-demo-note {
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  opacity: 0.78;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.rules-jammed-demo-wordbox {
+  border: 6px solid var(--neon-cyan);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 14px 12px 16px;
+  box-shadow: 0 0 24px rgba(0, 247, 255, 0.32);
+}
+.rules-jammed-demo-letters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(0.9rem, 2.8vw, 1.3rem);
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}
+
+/* Second Wind rules card: banner (mirrors #second-wind-banner from banners.ts) */
+.rules-second-wind-demo {
+  margin-top: 18px;
+  padding: 14px 14px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(0, 255, 136, 0.35);
+  background: rgba(0, 0, 0, 0.48);
+  text-align: center;
+}
+.rules-second-wind-demo-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: rgba(0, 255, 136, 0.92);
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+  margin-bottom: 12px;
+}
+.rules-second-wind-demo-banner {
+  display: inline-block;
+  margin: 0 auto 10px;
+  padding: 12px 20px;
+  border: 3px solid #00ff88;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #00ff88;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-shadow: 0 0 14px rgba(0, 255, 136, 0.7);
+}
+.rules-second-wind-demo-caption {
+  font-size: 0.55rem;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  opacity: 0.82;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* Threat level rules: mini header strip (mirrors header .stats / .threat) */
+.rules-threat-locate-demo {
+  margin-top: 18px;
+  padding: 14px 12px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(0, 247, 255, 0.3);
+  background: rgba(0, 0, 0, 0.5);
+}
+.rules-threat-locate-demo-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 0, 170, 0.9);
+  text-shadow: 0 0 10px rgba(255, 0, 170, 0.35);
+  margin-bottom: 8px;
+  text-align: center;
+}
+.rules-threat-locate-demo-intro {
+  font-size: 0.58rem;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  opacity: 0.88;
+  margin: 0 0 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.88);
+}
+.rules-threat-locate-demo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(10px, 2vw, 22px);
+  padding: 12px 10px 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.78);
+  border: 3px solid rgba(0, 247, 255, 0.55);
+  box-shadow: 0 0 16px rgba(0, 247, 255, 0.2);
+}
+.rules-threat-locate-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.rules-threat-locate-stat--highlight {
+  padding: 6px 8px 8px;
+  margin: -6px -4px -4px;
+  border-radius: 10px;
+  outline: 2px solid rgba(255, 0, 102, 0.85);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 16px rgba(255, 0, 102, 0.35),
+    inset 0 0 12px rgba(255, 0, 102, 0.08);
+}
+.rules-threat-locate-stat--scorePrimary {
+  padding: 6px 8px 8px;
+  margin: -6px -4px -4px;
+  border-radius: 10px;
+  outline: 2px solid rgba(0, 247, 255, 0.75);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 16px rgba(0, 247, 255, 0.28),
+    inset 0 0 12px rgba(0, 247, 255, 0.06);
+}
+.rules-threat-locate-label {
+  font-size: 8px;
+  opacity: 0.7;
+  letter-spacing: 0.12em;
+  color: var(--neon-cyan);
+}
+.rules-threat-locate-score,
+.rules-threat-locate-time {
+  color: #fff;
+  font-size: clamp(11px, 2.2vw, 14px);
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+}
+.rules-threat-locate-threat {
+  color: #ff0066;
+  font-size: clamp(12px, 2.4vw, 16px);
+  text-shadow: 0 0 14px #ff0066;
+  letter-spacing: 0.06em;
+}
+.rules-threat-locate-healthfake {
+  color: #00ff88;
+  font-size: clamp(11px, 2.2vw, 14px);
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.45);
+}
+.rules-threat-locate-demo-caption {
+  margin-top: 10px;
+  font-size: 0.52rem;
+  letter-spacing: 0.04em;
+  opacity: 0.72;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .rules-grid {
   display: grid;
   gap: 14px;

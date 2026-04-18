@@ -1,8 +1,34 @@
+import {
+  FLOW_DURATION_MAX_MS,
+  FLOW_DURATION_MIN_MS,
+  FLOW_GAUGE_ACTIVATE_AT,
+  FLOW_GAUGE_MAX,
+  FLOW_HEALTH_MULT_WHILE_ACTIVE,
+  FLOW_TYPO_GAUGE_MULT,
+} from "../constants";
 import { els } from "../dom/els";
 import { state } from "../state";
 
 /** Panel ids: `index` plus card ids used in navigation stack and data-rules-* */
 export const RULES_PANEL_INDEX = "index";
+
+/**
+ * Jammed / decoy numbers — keep in sync with `backend/src/constants.js` (`DECOY_WORD`).
+ * Flow timings and gauge knobs come from `../constants` imports above.
+ */
+const RULES_DECOY = {
+  burstWindowMs: 5000,
+  burstCount: 3,
+  durationMs: 11000,
+  cooldownMs: 55000,
+  decoyLen: 5,
+} as const;
+
+const flowDurMinS = FLOW_DURATION_MIN_MS / 1000;
+const flowDurMaxS = FLOW_DURATION_MAX_MS / 1000;
+const flowActivatePct = Math.round(FLOW_GAUGE_ACTIVATE_AT * 100);
+const typoGaugeKeepPct = Math.round(FLOW_TYPO_GAUGE_MULT * 100);
+const flowHealLessPct = Math.round((1 - FLOW_HEALTH_MULT_WHILE_ACTIVE) * 100);
 
 type RuleCard = {
   id: string;
@@ -15,19 +41,19 @@ const MECHANIC_CARDS: RuleCard[] = [
   {
     id: "threatLevel",
     title: "THREAT LEVEL",
-    subtitle: "Time pressure — faster drain as it rises",
+    subtitle: "HUD 1–16 · faster drain as it rises",
     implemented: true,
   },
   {
     id: "score",
     title: "SCORE",
-    subtitle: "Points for finished words",
+    subtitle: "Per word: length × 18 + 50",
     implemented: true,
   },
   {
     id: "flowState",
     title: "FLOW STATE",
-    subtitle: "Elastic gauge, Foresight, and interference",
+    subtitle: "Gauge · Enter · screen interference",
     implemented: true,
   },
 ];
@@ -36,17 +62,27 @@ const EFFECT_CARDS: RuleCard[] = [
   {
     id: "secondWind",
     title: "SECOND WIND",
-    subtitle: "One threat reset per match",
+    subtitle: "Threat reset if you spike HP in time",
+    implemented: true,
+  },
+  {
+    id: "foresight",
+    title: "FORESIGHT",
+    subtitle: "During Flow — next word + Jammed block",
     implemented: true,
   },
   {
     id: "jammed",
     title: "JAMMED",
-    subtitle: "Fake word from an opponent streak",
+    subtitle: "5-letter decoy after an enemy streak",
     implemented: true,
   },
-  { id: "comingSoonBuff1", title: "COMING SOON", subtitle: "New buff", implemented: false },
-  { id: "comingSoonDebuff1", title: "COMING SOON", subtitle: "New debuff", implemented: false },
+  {
+    id: "flowInterference",
+    title: "INTERFERENCE",
+    subtitle: "Glitch FX when someone’s Flow ends",
+    implemented: true,
+  },
 ];
 
 function rulesCurrentId(): string {
@@ -85,16 +121,16 @@ function rulesIndexHtml(): string {
     <div class="rules-section rules-goal">
       <div class="rules-h">GOAL</div>
       <div class="rules-p">
-        Finish words by typing them correctly. Each finished word heals you and adds to your ${rulesLink("score", "score")}.
+        Type each word correctly. Finishing a word heals you (more on longer words) and adds ${rulesLink("score", "score")} (<span class="rules-k">length × 18 + 50</span>).
       </div>
       <div class="rules-p">
-        Your health also drains slowly over time. The ${rulesLink("threatLevel", "threat level")} makes that drain faster as the match goes on—see ${rulesLink("threatLevel", "Threat level")} for details and ${rulesLink("secondWind", "Second Wind")}.
+        Health passively drains; ${rulesLink("threatLevel", "threat")} makes drain faster over time. ${rulesLink("secondWind", "Second Wind")} can reset that climb once.
       </div>
       <div class="rules-p">
-        Build ${rulesLink("flowState", "Flow")} for a timed bonus; a strong finish can ${rulesLink("flowState", "mess with a rival’s screen")}.
+        ${rulesLink("flowState", "Flow")}: build gauge, press Enter for a timed boost (${rulesLink("foresight", "Foresight")} while active); a strong exit can apply ${rulesLink("flowInterference", "interference")} to a rival.
       </div>
       <div class="rules-p">
-        <span class="rules-k">Win:</span> be the last player standing. <span class="rules-k">Lose:</span> your health reaches zero. Watch out for ${rulesLink("jammed", "Jammed")} after an opponent goes on a tear.
+        <span class="rules-k">Win (2+ players):</span> last alive. <span class="rules-k">Lose:</span> HP hits 0. <span class="rules-k">Jammed:</span> ${rulesLink("jammed", "fake word")} if someone streaks.
       </div>
     </div>
 
@@ -121,13 +157,36 @@ function rulesDetailHtml(panelId: string): string {
         <div class="rules-section">
           <div class="rules-h">THREAT LEVEL</div>
           <div class="rules-p">
-            Threat is the number shown in your HUD. It climbs as match time passes—about every 22 seconds it can step up, up to a maximum. Higher threat means your passive health drain gets faster.
+            HUD shows <span class="rules-k">1–16</span>. It steps up about every <span class="rules-k">22s</span> of <em>effective</em> match time (time since your last ${rulesLink("secondWind", "Second Wind")} threat reset). Higher value → faster passive drain.
           </div>
           <div class="rules-p">
-            ${rulesLink("secondWind", "Second Wind")} (once per match) resets your threat timing so you effectively start climbing from the bottom again.
+            ${rulesLink("secondWind", "Second Wind")} resets your effective threat clock once it procs.
           </div>
           <div class="rules-p">
-            Getting ${rulesLink("jammed", "Jammed")} does not change threat; it changes the word you must type for a short time.
+            ${rulesLink("jammed", "Jammed")} does not change threat—only which word you type for a while.
+          </div>
+          <div class="rules-threat-locate-demo" aria-hidden="true" data-testid="rules-threat-ui-example">
+            <div class="rules-threat-locate-demo-label">WHERE TO FIND IT</div>
+            <p class="rules-threat-locate-demo-intro">During a match, threat is the <span class="rules-k">pink number</span> in the <span class="rules-k">top header</span>—between Score and Health.</p>
+            <div class="rules-threat-locate-demo-bar" role="presentation">
+              <div class="rules-threat-locate-stat">
+                <span class="rules-threat-locate-label">SCORE</span>
+                <span class="rules-threat-locate-score">001240</span>
+              </div>
+              <div class="rules-threat-locate-stat rules-threat-locate-stat--highlight">
+                <span class="rules-threat-locate-label">THREAT LEVEL</span>
+                <span class="rules-threat-locate-threat">07</span>
+              </div>
+              <div class="rules-threat-locate-stat">
+                <span class="rules-threat-locate-label">HEALTH</span>
+                <span class="rules-threat-locate-healthfake">82%</span>
+              </div>
+              <div class="rules-threat-locate-stat">
+                <span class="rules-threat-locate-label">SURVIVED</span>
+                <span class="rules-threat-locate-time">03:42</span>
+              </div>
+            </div>
+            <div class="rules-threat-locate-demo-caption">Same layout as the live HUD; values here are examples only.</div>
           </div>
         </div>
       `;
@@ -136,10 +195,35 @@ function rulesDetailHtml(panelId: string): string {
         <div class="rules-section">
           <div class="rules-h">SCORE</div>
           <div class="rules-p">
-            You earn score every time you complete a word. Longer words give more points than short ones.
+            Each completed word: <span class="rules-k">word length × 18 + 50</span> (longer words score more).
           </div>
           <div class="rules-p">
-            Score is mostly for bragging rights and tie-break feel—but when ${rulesLink("flowState", "Flow")} ends, interference usually goes to whoever is closest to you on the scoreboard.
+            When someone’s ${rulesLink("flowState", "Flow")} ends, ${rulesLink("flowInterference", "interference")} usually hits the rival whose score is <em>closest</em> to theirs (ties pick randomly).
+          </div>
+          <div class="rules-score-locate-demo" aria-hidden="true" data-testid="rules-score-ui-example">
+            <div class="rules-threat-locate-demo-label">WHERE TO FIND IT</div>
+            <p class="rules-threat-locate-demo-intro">
+              During a match, your score is the <span class="rules-k">bright number</span> on the <span class="rules-k">far left</span> of the top header (six digits, often zero-padded). ${rulesLink("threatLevel", "Threat")} sits in the next column to the right.
+            </p>
+            <div class="rules-threat-locate-demo-bar" role="presentation">
+              <div class="rules-threat-locate-stat rules-threat-locate-stat--scorePrimary">
+                <span class="rules-threat-locate-label">SCORE</span>
+                <span class="rules-threat-locate-score">001240</span>
+              </div>
+              <div class="rules-threat-locate-stat">
+                <span class="rules-threat-locate-label">THREAT LEVEL</span>
+                <span class="rules-threat-locate-threat">07</span>
+              </div>
+              <div class="rules-threat-locate-stat">
+                <span class="rules-threat-locate-label">HEALTH</span>
+                <span class="rules-threat-locate-healthfake">82%</span>
+              </div>
+              <div class="rules-threat-locate-stat">
+                <span class="rules-threat-locate-label">SURVIVED</span>
+                <span class="rules-threat-locate-time">03:42</span>
+              </div>
+            </div>
+            <div class="rules-threat-locate-demo-caption">Same layout as the live HUD; values here are examples only.</div>
           </div>
         </div>
       `;
@@ -148,33 +232,79 @@ function rulesDetailHtml(panelId: string): string {
         <div class="rules-section">
           <div class="rules-h">FLOW STATE</div>
           <div class="rules-p">
-            When you <em>complete</em> a word with <em>no typos on that word</em>, your Flow gauge gains fill—<em>longer words add more</em>, shorter words add less (on top of the usual curve). The higher the gauge already is, the less each clean word adds (diminishing returns). The gauge also slowly drifts back toward empty over time—stronger pull the fuller it is (elastic decay). Decay pauses while Flow is active.
+            Finish a word with <em>no typos on that word</em> to fill the gauge (longer words help more; fill slows as the bar gets high). The bar eases down over time when not in Flow; decay pauses during Flow.
           </div>
           <div class="rules-p">
-            A typo <em>outside</em> Flow drops your gauge by about <span class="rules-k">35%</span> (it hurts, but it is not a full wipe).
+            A typo while <em>not</em> in Flow multiplies the gauge by <span class="rules-k">${typoGaugeKeepPct}%</span> (lose roughly <span class="rules-k">${100 - typoGaugeKeepPct}%</span> of the current fill).
           </div>
           <div class="rules-p">
-            When the gauge is at least half full, press <span class="rules-k">Enter</span> to enter Flow. How long Flow lasts scales smoothly with how full the gauge was at activation: about <span class="rules-k">6.5–7 seconds</span> at half, up to about <span class="rules-k">14 seconds</span> at full. Activating spends the charge (the gauge resets for the next build-up).
+            At <span class="rules-k">${flowActivatePct}%</span> of max (<span class="rules-k">${FLOW_GAUGE_MAX}</span>) or more, press <span class="rules-k">Enter</span> to start Flow. Duration scales with fill at activation: about <span class="rules-k">${flowDurMinS}s–${flowDurMaxS}s</span>. Activation clears the gauge.
           </div>
           <div class="rules-p">
-            <span class="rules-k">Foresight:</span> during Flow you see a soft preview of the <em>next</em> word above your current target, and you are fully immune to ${rulesLink("jammed", "Jammed")} for what you must type (you still type the real word). Healing from each word you finish during Flow is reduced by about <span class="rules-k">18%</span>.
+            ${rulesLink("foresight", "Foresight")} is active for the whole Flow window. Word heal per completion is <span class="rules-k">×${FLOW_HEALTH_MULT_WHILE_ACTIVE}</span> (~<span class="rules-k">${flowHealLessPct}%</span> less than normal).
           </div>
           <div class="rules-p">
-            Only correct keystrokes toward the current word add to the Flow bonus counter (used when Flow ends). A wrong keystroke during Flow ends Flow immediately and sends interference based on that counter—lost time is the main punishment (no extra gauge penalty on top).
+            During Flow, only correct new keystrokes add to the exit counter. One wrong new character ends Flow early and sends that counter as a payout (same as timing out).
+          </div>
+          <div class="rules-p">
+            That payout can inflict ${rulesLink("flowInterference", "interference")} on another player—see that debuff for victim rules and visuals.
+          </div>
+          <div class="rules-flow-gauge-demos" aria-hidden="true" data-testid="rules-flow-gauge-examples">
+            <div class="rules-flow-gauge-demo-label">EXAMPLE · FLOW BAR</div>
+            <div class="rules-flow-gauge-demo-row">
+              <div class="rules-flow-gauge-demo-caption">Building (under ${flowActivatePct}%)</div>
+              <div class="rules-flow-demo-wrap rules-flow-demo-wrap--building">
+                <div class="rules-flow-hud-row">
+                  <div class="rules-flow-hud-top">
+                    <span class="rules-flow-hud-title">FLOW</span>
+                    <span class="rules-flow-hud-pct"> 35%</span>
+                  </div>
+                  <div class="rules-flow-gauge-outer">
+                    <div class="rules-flow-gauge-bar" style="width:35%"></div>
+                  </div>
+                  <div class="rules-flow-hint rules-flow-hint--building">ELASTIC GAUGE · CLEAN WORDS FILL</div>
+                </div>
+              </div>
+            </div>
+            <div class="rules-flow-gauge-demo-row">
+              <div class="rules-flow-gauge-demo-caption">Ready (≥${flowActivatePct}% — press Enter)</div>
+              <div class="rules-flow-demo-wrap rules-flow-demo-wrap--ready rules-flow-demo-wrap--high">
+                <div class="rules-flow-hud-row">
+                  <div class="rules-flow-hud-top">
+                    <span class="rules-flow-hud-title">FLOW</span>
+                    <span class="rules-flow-hud-pct"> 72%</span>
+                  </div>
+                  <div class="rules-flow-gauge-outer">
+                    <div class="rules-flow-gauge-bar" style="width:72%"></div>
+                  </div>
+                  <div class="rules-flow-hint rules-flow-hint--ready">PRESS ENTER</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="rules-section rules-subsection" id="rules-flow-interference">
-          <div class="rules-h">Interference</div>
+      `;
+    case "foresight":
+      return `
+        <div class="rules-section">
+          <div class="rules-h">FORESIGHT</div>
           <div class="rules-p">
-            When Flow ends, that bonus is sent to the server. Another player—usually whoever has the score closest to yours—gets brief screen interference (glitch-style visuals). How intense it is depends on how strong your Flow finish was.
+            A buff tied to ${rulesLink("flowState", "Flow")}: only while Flow is running after you press Enter.
           </div>
           <div class="rules-p">
-            <button type="button" class="rules-preview-fx-btn" data-rules-preview-flow-interference="1" data-testid="rules-preview-flow-interference">
-              Flash sample interference
-            </button>
+            You see the <em>next</em> word above your current line (soft preview). You still type the real current word—preview is informational.
           </div>
           <div class="rules-p">
-            Related: ${rulesLink("threatLevel", "Threat level")}, ${rulesLink("score", "Score")}, ${rulesLink("jammed", "Jammed")}.
+            ${rulesLink("jammed", "Jammed")} cannot swap the word you must type; the <span class="rules-k">JAMMED!</span> banner stays hidden during Flow so the UI stays clear.
+          </div>
+          <div class="rules-foresight-demo" aria-hidden="true" data-testid="rules-foresight-example">
+            <div class="rules-foresight-demo-label">EXAMPLE LAYOUT</div>
+            <div class="foresight-word foresight-visible rules-foresight-demo-next">nebula</div>
+            <div class="rules-foresight-demo-wordbox">
+              <span class="rules-foresight-demo-note">You type (current word)</span>
+              <div class="rules-foresight-demo-current">starship</div>
+            </div>
+            <div class="rules-foresight-demo-caption">Soft dim line above = next word; bright box = what you type.</div>
           </div>
         </div>
       `;
@@ -183,10 +313,17 @@ function rulesDetailHtml(panelId: string): string {
         <div class="rules-section">
           <div class="rules-h">SECOND WIND</div>
           <div class="rules-p">
-            Once per match. If your health drops <em>below 20%</em>, then within about <span class="rules-k">2 seconds</span> you heal back up to <span class="rules-k">80% health or higher</span>, your threat clock resets—you effectively start climbing threat from the beginning again.
+            Once per match. When server health first drops <span class="rules-k">below 20%</span>, a <span class="rules-k">2s</span> window opens. If you reach <span class="rules-k">80%+ HP</span> before that window closes—by finishing words, same as normal healing—your <em>threat baseline resets</em> (you climb threat from the bottom again). The game does not auto-heal you.
           </div>
           <div class="rules-p">
-            See also: ${rulesLink("threatLevel", "Threat level")}.
+            Miss 80% in that window and nothing triggers; you can arm again on later dips below 20% until Second Wind actually fires once this match.
+          </div>
+          <div class="rules-second-wind-demo" aria-hidden="true" data-testid="rules-second-wind-example">
+            <div class="rules-second-wind-demo-label">EXAMPLE WHEN IT TRIGGERS</div>
+            <div class="rules-second-wind-demo-banner">SECOND WIND!</div>
+            <div class="rules-second-wind-demo-caption">
+              In a match this banner flashes for about <span class="rules-k">1.4s</span> when Second Wind procs—same moment your ${rulesLink("threatLevel", "threat")} climb restarts from the bottom.
+            </div>
           </div>
         </div>
       `;
@@ -195,13 +332,37 @@ function rulesDetailHtml(panelId: string): string {
         <div class="rules-section">
           <div class="rules-h">JAMMED</div>
           <div class="rules-p">
-            If an opponent finishes <span class="rules-k">three words within about five seconds</span>, other players can get Jammed (there is a cooldown so it cannot spam constantly). The effect lasts a bit over ten seconds.
+            If an opponent completes <span class="rules-k">${RULES_DECOY.burstCount}</span> words within <span class="rules-k">${RULES_DECOY.burstWindowMs / 1000}s</span>, others can get Jammed. That source cannot trigger again for <span class="rules-k">${RULES_DECOY.cooldownMs / 1000}s</span>. The debuff runs <span class="rules-k">${RULES_DECOY.durationMs / 1000}s</span>.
           </div>
           <div class="rules-p">
-            While Jammed, after you finish the word you were already on, your <em>next</em> typing target becomes a fake word until you complete it. You will see the on-screen <span class="rules-k">JAMMED!</span> banner when it applies to you. While ${rulesLink("flowState", "Flow")} is active, Foresight blocks Jammed from changing your typing target (and the banner hides for clarity).
+            After your current word, your next target is a fake <span class="rules-k">${RULES_DECOY.decoyLen}</span>-letter word until you clear it. Banner: <span class="rules-k">JAMMED!</span> ${rulesLink("flowState", "Flow")} / ${rulesLink("foresight", "Foresight")} blocks the swap for what you type.
+          </div>
+          <div class="rules-jammed-demo" aria-hidden="true" data-testid="rules-jammed-example">
+            <div class="rules-jammed-demo-label">EXAMPLE WHEN ACTIVE</div>
+            <div class="rules-jammed-demo-banner">JAMMED!</div>
+            <div class="rules-jammed-demo-note">Decoy target in the word box (sample letters):</div>
+            <div class="rules-jammed-demo-wordbox">
+              <div class="rules-jammed-demo-letters">
+                ${"qzxwm"
+                  .split("")
+                  .map((c) => `<span class="letter pending">${c}</span>`)
+                  .join("")}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    case "flowInterference":
+      return `
+        <div class="rules-section rules-subsection" id="rules-flow-interference">
+          <div class="rules-h">INTERFERENCE</div>
+          <div class="rules-p">
+            A debuff applied to <em>you</em> when someone else’s ${rulesLink("flowState", "Flow")} ends (timer or typo). The server picks one victim: usually whoever is <em>closest</em> on the ${rulesLink("score", "scoreboard")} to the Flow player (ties random). Glitch-style visuals; how harsh and how long it lasts scale with their Flow exit counter (strong finish → worse for you).
           </div>
           <div class="rules-p">
-            See also: ${rulesLink("threatLevel", "Threat level")}, ${rulesLink("flowState", "Flow")}.
+            <button type="button" class="rules-preview-fx-btn" data-rules-preview-flow-interference="1" data-testid="rules-preview-flow-interference">
+              Flash sample interference
+            </button>
           </div>
         </div>
       `;

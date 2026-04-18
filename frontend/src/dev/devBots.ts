@@ -1,4 +1,4 @@
-import { joinRoom, leaveRoom, updatePlayer } from "../api";
+import { joinRoom, leaveRoom, setPlayerReady, updatePlayer } from "../api";
 import {
   DEV_BOT_CHAR_MS,
   DEV_BOT_JITTER_MS,
@@ -232,7 +232,11 @@ export async function addDevBot() {
     const botId = response.playerId;
     if (!Array.isArray(state.devBotIds)) state.devBotIds = [];
     if (!state.devBotIds.includes(botId)) state.devBotIds.push(botId);
-    syncRoom(response.room);
+    await setPlayerReady(state.roomCode, botId, true).catch(() => {});
+    const room = response.room as any;
+    const players = { ...(room?.players || {}) };
+    if (players[botId]) players[botId] = { ...players[botId], ready: true };
+    syncRoom({ ...room, players });
     updateDevBotPanel();
     scheduleDevBotStep(botId);
   } catch (error: any) {

@@ -22,6 +22,8 @@ describe("last-player-standing match end", () => {
     const joined = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "B" });
     const bId = joined.body.playerId;
 
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: aId, ready: true });
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: bId, ready: true });
     await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
 
     await request(app).patch(`/api/rooms/${roomCode}/players/${aId}`).send({ health: 0.01 });

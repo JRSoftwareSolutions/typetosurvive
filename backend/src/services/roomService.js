@@ -322,6 +322,7 @@ export function createRoom({ username, wordSequence }) {
         secondWindUsed: false,
         secondWindLowAt: null,
         threatResetElapsedSeconds: 0,
+        ready: false,
       },
     },
   });
@@ -351,7 +352,12 @@ export function joinRoom({ roomCode, username, playerId }) {
     secondWindUsed: false,
     secondWindLowAt: null,
     threatResetElapsedSeconds: 0,
+    ready: false,
   };
+
+  Object.keys(room.players).forEach((id) => {
+    room.players[id].ready = false;
+  });
 
   room.participants = room.participants ?? {};
   const prev = room.participants[resolvedPlayerId] ?? {};
@@ -371,9 +377,20 @@ export function joinRoom({ roomCode, username, playerId }) {
   return { room, playerId: resolvedPlayerId };
 }
 
+/**
+ * @returns {true | 'not_creator' | 'not_all_ready'}
+ */
 export function startRoom({ roomCode, playerId }) {
   const room = rooms.get(roomCode);
-  if (!room || room.creatorId !== playerId) return false;
+  if (!room || room.creatorId !== playerId) return "not_creator";
+  const ids = Object.keys(room.players || {});
+  const allReady = ids.length > 0 && ids.every((id) => room.players[id]?.ready === true);
+  if (!allReady) return "not_all_ready";
+
+  Object.keys(room.players).forEach((id) => {
+    delete room.players[id].ready;
+  });
+
   room.started = true;
   room.startedAt = room.startedAt ?? Date.now();
   room.lastTickAt = Date.now();
@@ -382,6 +399,17 @@ export function startRoom({ roomCode, playerId }) {
   touchRoomActivity(room);
   emitRoomUpdate(roomCode);
   ensureRoomTicker(roomCode);
+  return true;
+}
+
+/** @returns {true | 'not_found' | 'game_started'} */
+export function setPlayerReady({ roomCode, playerId, ready }) {
+  const room = rooms.get(roomCode);
+  if (!room?.players?.[playerId]) return "not_found";
+  if (room.started) return "game_started";
+  room.players[playerId].ready = Boolean(ready);
+  touchRoomActivity(room);
+  emitRoomUpdate(roomCode);
   return true;
 }
 
@@ -395,7 +423,7 @@ export function updatePlayer({ roomCode, playerId, patch }) {
     completeDecoyTyped(room, playerId, patch.decoyTypedEffectId);
   }
 
-  const { decoyTypedEffectId: _decoyTyped, ...playerPatch } = patch || {};
+  const { decoyTypedEffectId: _decoyTyped, ready: _readyIgnored, ...playerPatch } = patch || {};
   const next = {
     ...prev,
     ...playerPatch,

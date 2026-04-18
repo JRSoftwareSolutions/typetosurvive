@@ -8,13 +8,14 @@ import { applyFlowInputDelta } from "../flow/flow";
 import { flowDurationMsAtActivation } from "../gameLogic";
 import { endGame, success } from "../game/game";
 import { state } from "../state";
-import { updateUI } from "../ui/render";
+import { updateLobbyControls, updateUI } from "../ui/render";
 import { rulesNavigateHome, rulesNavigatePop, rulesNavigatePush } from "../ui/rules";
 import { updateLeaveRoomVisibility } from "../ui/visibility";
 
 export type BindEventsOpts = {
   createRoomHandler: () => void;
   joinRoomHandler: () => void;
+  readyToggleHandler: () => void;
   startGameHandler: () => void;
   leaveRoomHandler: () => void;
   openRules: () => void;
@@ -54,6 +55,7 @@ export function bindEvents(opts: BindEventsOpts) {
 
   els.createBtn.addEventListener("click", opts.createRoomHandler);
   els.joinBtn.addEventListener("click", opts.joinRoomHandler);
+  els.readyToggleBtn?.addEventListener("click", () => void opts.readyToggleHandler());
   els.startBtn.addEventListener("click", opts.startGameHandler);
   els.leaveBtn.addEventListener("click", opts.leaveRoomHandler);
   els.leaveAfterGameBtn.addEventListener("click", opts.leaveRoomHandler);
@@ -147,4 +149,5 @@ export function bindEvents(opts: BindEventsOpts) {
   });
 
   updateLeaveRoomVisibility();
+  if (!state.gameRunning) updateLobbyControls();
 }

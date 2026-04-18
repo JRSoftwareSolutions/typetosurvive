@@ -2,6 +2,7 @@ import type { EffectDto } from "./gameLogic";
 
 export type PlayerDto = {
   username?: string;
+  ready?: boolean;
   health?: number;
   score?: number;
   deadAt?: number | null;

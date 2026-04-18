@@ -3,6 +3,7 @@ import {
   createRoom,
   getRoom,
   joinRoom,
+  setPlayerReady,
   startRoom,
   subscribeRoom,
   sweepStaleRoomsNow,
@@ -60,6 +61,7 @@ describe("abandoned room cleanup", () => {
     vi.useFakeTimers();
     try {
       const { roomCode, playerId } = createRoom({ username: "solo", wordSequence: ["x"] });
+      setPlayerReady({ roomCode, playerId, ready: true });
       startRoom({ roomCode, playerId });
 
       const res = mockRes();

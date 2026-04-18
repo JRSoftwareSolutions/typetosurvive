@@ -5,6 +5,7 @@ import {
   getRoom,
   joinRoom,
   leaveRoom,
+  setPlayerReady,
   startRoom,
   subscribeRoom,
   unsubscribeRoom,
@@ -53,8 +54,20 @@ export function createApp() {
   app.post("/api/rooms/:roomCode/start", (req, res) => {
     const roomCode = req.params.roomCode.toUpperCase();
     const { playerId } = req.body ?? {};
-    const ok = startRoom({ roomCode, playerId });
-    if (!ok) return res.status(403).json({ message: "Only room creator can start game" });
+    const result = startRoom({ roomCode, playerId });
+    if (result === "not_creator") return res.status(403).json({ message: "Only room creator can start game" });
+    if (result === "not_all_ready") {
+      return res.status(403).json({ message: "All players must be ready before starting" });
+    }
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/rooms/:roomCode/ready", (req, res) => {
+    const roomCode = req.params.roomCode.toUpperCase();
+    const { playerId, ready } = req.body ?? {};
+    const result = setPlayerReady({ roomCode, playerId, ready: Boolean(ready) });
+    if (result === "not_found") return res.status(404).json({ message: "Player or room not found" });
+    if (result === "game_started") return res.status(403).json({ message: "Cannot change ready after game has started" });
     return res.json({ ok: true });
   });
 

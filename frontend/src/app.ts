@@ -1,8 +1,9 @@
-import { createRoom, joinRoom, startRoom, subscribeRoomEvents, updatePlayer } from "./api";
+import { createRoom, joinRoom, setPlayerReady, startRoom, subscribeRoomEvents, updatePlayer } from "./api";
 import { FLOW_GAUGE_MAX, FLOW_TYPO_GAUGE_MULT } from "./constants";
 import { els } from "./dom/els";
 import { bindEvents } from "./events/bindEvents";
 import { getActiveDecoyForMe, typingTargetWord } from "./effects/decoy";
+import { getMyPlayer } from "./game/selectors";
 import { leaveRoomAndReload } from "./game/game";
 import { state } from "./state";
 import { syncRoom } from "./multiplayer/sync";
@@ -74,6 +75,18 @@ async function startGameHandler() {
   }
 }
 
+async function readyToggleHandler() {
+  if (!state.roomCode || !state.myPlayerId || state.gameRunning) return;
+  if ((state.room as any)?.started) return;
+  const me = getMyPlayer() as any;
+  const next = !Boolean(me?.ready);
+  try {
+    await setPlayerReady(state.roomCode, state.myPlayerId, next);
+  } catch (error: any) {
+    alert(error.message);
+  }
+}
+
 function updateLetterColors(typed: string) {
   const typedLower = typed.toLowerCase();
   const wordLower = typingTargetWord().toLowerCase();
@@ -128,6 +141,7 @@ async function leaveRoomHandler() {
 bindEvents({
   createRoomHandler,
   joinRoomHandler,
+  readyToggleHandler,
   startGameHandler,
   leaveRoomHandler,
   openRules,

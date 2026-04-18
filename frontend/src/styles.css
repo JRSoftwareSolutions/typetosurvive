@@ -917,6 +917,26 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .code-input { text-transform: uppercase; }
 .code-input { border-color: var(--neon-cyan); letter-spacing: 6px; }
 .player-list-wrap { margin-top: 10px; width: 100%; max-width: 420px; }
+.lobby-ready-wrap {
+  margin-top: 14px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  justify-content: center;
+}
+.ready-toggle-btn {
+  font-size: 0.85rem;
+  padding: 12px 22px;
+}
+.ready-toggle-btn.player-ready-on {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 18px rgba(0, 255, 136, 0.45);
+}
+.ready-toggle-btn.player-ready-on:hover {
+  background: #00ff88;
+  color: #0b001a;
+}
 .label-pink, .code-label, .creator-label { color: #ff00aa; margin-bottom: 10px; text-align: center; }
 .player-list {
   background: rgba(0, 0, 0, 0.85);

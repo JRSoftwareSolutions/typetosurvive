@@ -34,6 +34,10 @@ test("create room, join, start, and register a success", async ({ browser, baseU
   await b.getByTestId("join-code-input").fill(roomCode);
   await b.getByTestId("join-room-btn").click();
 
+  await a.getByTestId("ready-toggle-btn").click();
+  await b.getByTestId("ready-toggle-btn").click();
+  await expect(a.getByTestId("start-game-btn")).toBeEnabled();
+
   // Start game (A is creator).
   await a.getByTestId("start-game-btn").click();
 

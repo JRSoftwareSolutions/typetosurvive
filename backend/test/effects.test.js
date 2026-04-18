@@ -105,6 +105,9 @@ describe("multiplayer effects (regression)", () => {
     expect(cId).not.toBe(aId);
     expect(cId).not.toBe(bId);
 
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: aId, ready: true });
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: bId, ready: true });
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: cId, ready: true });
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
     expect(startRes.status).toBe(200);
 
@@ -151,6 +154,9 @@ describe("multiplayer effects (regression)", () => {
     const joinedC = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "C" });
     const cId = joinedC.body.playerId;
 
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: aId, ready: true });
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: bId, ready: true });
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: cId, ready: true });
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: aId });
     expect(startRes.status).toBe(200);
 

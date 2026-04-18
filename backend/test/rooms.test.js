@@ -49,6 +49,28 @@ describe("rooms API (regression)", () => {
     expect(startRes.status).toBe(403);
   });
 
+  it("blocks creator from starting until all players are ready", async () => {
+    const app = createApp();
+    const created = await request(app).post("/api/rooms").send({ username: "Creator" });
+    const roomCode = created.body.roomCode;
+    const creatorId = created.body.playerId;
+
+    const joined = await request(app).post(`/api/rooms/${roomCode}/join`).send({ username: "Bob" });
+    const bobId = joined.body.playerId;
+
+    const blocked = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.message).toMatch(/ready/i);
+
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: creatorId, ready: true });
+    const stillBlocked = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
+    expect(stillBlocked.status).toBe(403);
+
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: bobId, ready: true });
+    const ok = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
+    expect(ok.status).toBe(200);
+  });
+
   it("allows rename-in-place when rejoining with playerId", async () => {
     const app = createApp();
     const created = await request(app).post("/api/rooms").send({ username: "Creator" });

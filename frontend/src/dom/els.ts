@@ -17,6 +17,7 @@ export const els = {
   finalStats: document.getElementById("final-stats") as HTMLElement,
   createBtn: document.getElementById("create-btn") as HTMLButtonElement,
   joinBtn: document.getElementById("join-btn") as HTMLButtonElement,
+  readyToggleBtn: document.getElementById("ready-toggle-btn") as HTMLButtonElement | null,
   startBtn: document.getElementById("start-btn") as HTMLButtonElement,
   leaveBtn: document.getElementById("leave-btn") as HTMLButtonElement,
   leaveAfterGameBtn: document.getElementById("leave-after-game-btn") as HTMLButtonElement,

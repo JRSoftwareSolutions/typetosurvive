@@ -52,6 +52,13 @@ export function startRoom(roomCode: string, playerId: string) {
   });
 }
 
+export function setPlayerReady(roomCode: string, playerId: string, ready: boolean) {
+  return request(`/rooms/${roomCode}/ready`, {
+    method: "POST",
+    body: JSON.stringify({ playerId, ready }),
+  });
+}
+
 export function updatePlayer(roomCode: string, playerId: string, patch: Record<string, unknown>) {
   return request(`/rooms/${roomCode}/players/${playerId}`, {
     method: "PATCH",

@@ -19,26 +19,73 @@ export function renderWord() {
   updateForesightPreview();
 }
 
+function allPlayersReady(room: any): boolean {
+  const players = room?.players || {};
+  const ids = Object.keys(players);
+  return ids.length > 0 && ids.every((pid) => players[pid]?.ready === true);
+}
+
+export function updateLobbyControls() {
+  const room: any = state.room;
+  const inRoom = Boolean(state.roomCode && state.myPlayerId && room);
+  const inLobby = inRoom && !state.gameRunning && !room?.started;
+  const btn = els.readyToggleBtn;
+  if (!btn) return;
+
+  if (!inLobby) {
+    btn.disabled = true;
+    btn.textContent = "READY";
+    btn.classList.remove("player-ready-on");
+    return;
+  }
+
+  btn.disabled = false;
+  const me: any = getMyPlayer();
+  const ready = Boolean(me?.ready);
+  btn.textContent = ready ? "NOT READY" : "READY";
+  btn.classList.toggle("player-ready-on", ready);
+
+  const isCreator = room?.creatorId === state.myPlayerId;
+  if (isCreator) {
+    els.startBtn.disabled = !allPlayersReady(room);
+  }
+}
+
 export function renderPlayerList() {
+  if (!state.gameRunning) {
+    updateLobbyControls();
+  }
+
   const now = Date.now();
   if (now - state.lastRenderAt < 50) return;
   state.lastRenderAt = now;
 
-  const players = (state.room as any)?.players || {};
+  const room: any = state.room;
+  const players = room?.players || {};
+  const inLobby = !state.gameRunning && !room?.started;
+
   let html = "<div style='color:#ff00aa;margin-bottom:8px'>PLAYERS</div>";
   Object.keys(players).forEach((id) => {
     const player = players[id];
     const hp = Math.max(0, player.health || 0);
     const isMe = id === state.myPlayerId;
+    const statusRight = inLobby
+      ? player.ready === true
+        ? "<span style='color:#00ff88;font-size:0.65rem'>READY</span>"
+        : "<span style='opacity:0.65;font-size:0.65rem'>WAITING</span>"
+      : `<span style="color:#00ff88">${Math.floor(hp)}%</span>`;
+    const barRow = inLobby
+      ? ""
+      : `<div style="height:12px;background:#111;border:2px solid var(--neon-cyan)">
+          <div style="height:100%;width:${hp}%;background:linear-gradient(90deg,#00ff88,#00cc66);transition:width .3s"></div>
+        </div>`;
     html += `
       <div data-player-id="${id}" data-testid="player-row" style="margin:8px 0">
-        <div style="display:flex;justify-content:space-between">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
           <span>${player.username} ${isMe ? "(YOU)" : ""}</span>
-          <span style="color:#00ff88">${Math.floor(hp)}%</span>
+          ${statusRight}
         </div>
-        <div style="height:12px;background:#111;border:2px solid var(--neon-cyan)">
-          <div style="height:100%;width:${hp}%;background:linear-gradient(90deg,#00ff88,#00cc66);transition:width .3s"></div>
-        </div>
+        ${barRow}
       </div>`;
   });
 

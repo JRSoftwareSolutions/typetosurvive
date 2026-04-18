@@ -18,6 +18,7 @@ describe("server-authoritative health ticking", () => {
     const roomCode = created.body.roomCode;
     const creatorId = created.body.playerId;
 
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: creatorId, ready: true });
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
     expect(startRes.status).toBe(200);
 
@@ -44,6 +45,7 @@ describe("server-authoritative health ticking", () => {
     const roomCode = created.body.roomCode;
     const creatorId = created.body.playerId;
 
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: creatorId, ready: true });
     await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
     await vi.advanceTimersByTimeAsync(500);
 
@@ -64,6 +66,7 @@ describe("server-authoritative health ticking", () => {
     const roomCode = created.body.roomCode;
     const creatorId = created.body.playerId;
 
+    await request(app).post(`/api/rooms/${roomCode}/ready`).send({ playerId: creatorId, ready: true });
     const startRes = await request(app).post(`/api/rooms/${roomCode}/start`).send({ playerId: creatorId });
     expect(startRes.status).toBe(200);
 
